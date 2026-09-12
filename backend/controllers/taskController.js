@@ -7,8 +7,7 @@ const createTask = async (req, res) => {
             description,
             reward,
             pickupLocation,
-            dropLocation,
-            createdBy
+            dropLocation
         } = req.body;
 
         const newTask = await Task.create({
@@ -17,13 +16,14 @@ const createTask = async (req, res) => {
             reward,
             pickupLocation,
             dropLocation,
-            createdBy
+            createdBy: req.user.userId
         });
 
         res.status(201).json({
             message: "Task created successfully",
             task: newTask
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Error creating task"
