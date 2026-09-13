@@ -29,13 +29,31 @@ const createTask = async (req, res , next) => {
     }
 };
 
-const getTasks = async (req, res , next) => {
+const getTasks = async (req, res, next) => {
     try {
-        const tasks = await Task.find({ status: "open" });
+        const { page, limit } = req.query;
+
+        const skip = (page - 1) * limit;
+
+        const [tasks, totalTasks] = await Promise.all([
+            Task.find({ status: "open" })
+                .skip(skip)
+                .limit(limit),
+
+            Task.countDocuments({ status: "open" })
+        ]);
+
+        const totalPages = Math.ceil(totalTasks / limit);
 
         res.status(200).json({
             message: "Tasks fetched successfully",
-            tasks
+            tasks,
+            pagination: {
+                page,
+                limit,
+                totalTasks,
+                totalPages
+            }
         });
     } catch (error) {
         next(error);
