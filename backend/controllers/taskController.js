@@ -176,20 +176,21 @@ const completeTask = async (req,res , next) => {
         const taskId = req.params.id;
         const userId = req.user.userId;
 
-        const task = await Task.findById(taskId);
-        if(!task){
-            return res.status(404).json({
-                message: "Task not found"
-            });
-        }
-        if(task.status !== "accepted" || task.assignedTo.toString() !== userId){
-            return res.status(403).json({
-                message: "Task cannot be completed"
-            });
-        }
-        const updatedTask = await Task.findByIdAndUpdate(taskId, {
+        const updatedTask = await Task.findOneAndUpdate({
+            _id: taskId,
+            status: "accepted",
+            assignedTo: userId
+        }, {
             status: "completed"
-        }, { new: true });
+        }, {
+            new: true
+        });
+
+        if(!updatedTask){
+            return res.status(400).json({
+                message: "Task not found, unavailable, or cannot be completed by the user"
+            });
+        }
 
         res.status(200).json({
             message: "Task completed successfully",
