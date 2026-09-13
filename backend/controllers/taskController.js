@@ -1,6 +1,6 @@
 import Task from "../models/Task.js";
 
-const createTask = async (req, res) => {
+const createTask = async (req, res , next) => {
     try {
         const {
             title,
@@ -25,13 +25,11 @@ const createTask = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error creating task"
-        });
+        next(error);
     }
 };
 
-const getTasks = async (req, res) => {
+const getTasks = async (req, res , next) => {
     try {
         const tasks = await Task.find({ status: "open" });
 
@@ -40,17 +38,16 @@ const getTasks = async (req, res) => {
             tasks
         });
     } catch (error) {
-        res.status(500).json({
-            message: "Error fetching tasks"
-        });
+        next(error);
     }
 };
 
-const getTaskById = async (req, res) => {
+const getTaskById = async (req, res , next) => {
     try {
         const { id } = req.params;
 
-        const task = await Task.findById(id);
+        const task = await Task.findById(id).populate("createdBy", "name email")
+                                            .populate("assignedTo", "name email");
 
         if (!task) {
             return res.status(404).json({
@@ -63,9 +60,7 @@ const getTaskById = async (req, res) => {
             task
         });
     } catch (error) {
-        res.status(500).json({
-            message: "Error fetching task"
-        });
+        next(error);
     }
 };
 
@@ -102,7 +97,7 @@ const getTaskById = async (req, res) => {
 //     }
 // }
 
-const acceptTask = async (req, res) => {
+const acceptTask = async (req, res , next) => {
     try {
         const taskId = req.params.id;
         const userId = req.user.userId;
@@ -136,13 +131,11 @@ const acceptTask = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error accepting task"
-        });
+        next(error);
     }
 };
 
-const completeTask = async (req,res) => {
+const completeTask = async (req,res , next) => {
     try{
         const taskId = req.params.id;
         const userId = req.user.userId;
@@ -168,13 +161,11 @@ const completeTask = async (req,res) => {
         });
     }
     catch(error){
-        res.status(500).json({
-            message: "Error completing task"
-        });
+        next(error);
     }
 }
 
-const cancelTask = async(req,res) => {
+const cancelTask = async(req,res , next) => {
     try{
         const taskId = req.params.id;
         const userId = req.user.userId;
@@ -217,13 +208,11 @@ const cancelTask = async(req,res) => {
         });
     }
     catch(error){
-        res.status(500).json({
-            message: "Error cancelling task"
-        });
+        next(error);
     }
 }
 
-const getMyPostedTasks = async (req,res) => {
+const getMyPostedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
         const tasks = await Task.find({ createdBy: userId });
@@ -234,13 +223,11 @@ const getMyPostedTasks = async (req,res) => {
         });
     }
     catch(error){
-        res.status(500).json({
-            message: "Error fetching posted tasks"
-        });
+        next(error);
     }
 }
 
-const getMyAcceptedTasks = async (req,res) => {
+const getMyAcceptedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
         const tasks = await Task.find({ assignedTo: userId }).populate("createdBy", "name email");
@@ -251,9 +238,7 @@ const getMyAcceptedTasks = async (req,res) => {
         });
     }
     catch(error){
-        res.status(500).json({
-            message: "Error fetching accepted tasks"
-        });
+        next(error);
     }
 }
 

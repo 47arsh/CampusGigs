@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import errorHandler from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.get("/", (req, res) => {
     });
 });
 
+app.use(errorHandler);
 const startServer = async () => {
     await connectDB();
 
