@@ -1,3 +1,5 @@
+import {Link} from "react-router-dom";
+
 function Navbar() {
   return (
     <nav className="border-b border-slate-200 bg-white">
@@ -9,25 +11,25 @@ function Navbar() {
         </div>
 
         <div className="hidden items-center gap-8 md:flex">
-          <a href="#" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link to="/how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             How It Works
-          </a>
+          </Link>
 
-          <a href="#" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link to="/features" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             Features
-          </a>
+          </Link>
 
-          <a href="#" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <Link to="/about" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             About
-          </a>
+          </Link>
 
-          <button className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 font-medium text-slate-700 hover:bg-slate-50">
+          <Link to="/login" className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 font-medium text-slate-700 hover:bg-slate-50">
             Login
-          </button>
+          </Link>
 
-          <button className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700">
+          <Link to="/register" className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-700">
             Get Started
-          </button>
+          </Link>
         </div>
 
       </div>
