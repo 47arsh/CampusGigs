@@ -223,11 +223,47 @@ const cancelTask = async(req,res) => {
     }
 }
 
+const getMyPostedTasks = async (req,res) => {
+    try{
+        const userId = req.user.userId;
+        const tasks = await Task.find({ createdBy: userId });
+
+        res.status(200).json({
+            message: "My posted tasks fetched successfully",
+            tasks: tasks
+        });
+    }
+    catch(error){
+        res.status(500).json({
+            message: "Error fetching posted tasks"
+        });
+    }
+}
+
+const getMyAcceptedTasks = async (req,res) => {
+    try{
+        const userId = req.user.userId;
+        const tasks = await Task.find({ assignedTo: userId }).populate("createdBy", "name email");
+
+        res.status(200).json({
+            message: "My accepted tasks fetched successfully",
+            tasks: tasks
+        });
+    }
+    catch(error){
+        res.status(500).json({
+            message: "Error fetching accepted tasks"
+        });
+    }
+}
+
 export {
     createTask,
     getTasks,
     getTaskById,
     acceptTask,
     completeTask,
-    cancelTask
+    cancelTask,
+    getMyPostedTasks,
+    getMyAcceptedTasks
 };
