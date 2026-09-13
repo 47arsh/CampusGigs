@@ -69,8 +69,79 @@ const getTaskById = async (req, res) => {
     }
 };
 
+// const acceptTask = async (req,res) => {
+//     try{
+//         const taskId = req.params.id;
+//         const userId = req.user.userId;
+
+//         const task = await Task.findById(taskId);
+//         if(!task){
+//             return res.status(404).json({
+//                 message: "Task not found"
+//             });
+//         }
+//         if(task.status !== "open"){
+//             return res.status(400).json({
+//                 message: "Task is not available for acceptance"
+//             });
+//         }
+//         const updatedTask = await Task.findByIdAndUpdate(taskId, {
+//             status: "accepted",
+//             assignedTo: userId
+//         }, { new: true });
+
+//         res.status(200).json({
+//             message: "Task accepted successfully",
+//             task: updatedTask
+//         });
+//     }
+//     catch(error){
+//         res.status(500).json({
+//             message: "Error accepting task"
+//         });
+//     }
+// }
+
+const acceptTask = async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const userId = req.user.userId;
+        //condition checking goes inside Mongoose query to ensure atomicity and avoid race conditions
+        const updatedTask = await Task.findOneAndUpdate(
+            {
+                _id: taskId,
+                status: "open"
+            },
+            {
+                status: "accepted",
+                assignedTo: userId
+            },
+            {
+                new: true
+            }
+        );
+
+        if (!updatedTask) {
+            return res.status(400).json({
+                message: "Task not found or is no longer available"
+            });
+        }
+
+        res.status(200).json({
+            message: "Task accepted successfully",
+            task: updatedTask
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error accepting task"
+        });
+    }
+};
+
 export {
     createTask,
     getTasks,
-    getTaskById
+    getTaskById,
+    acceptTask
 };
