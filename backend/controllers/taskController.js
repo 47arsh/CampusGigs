@@ -31,16 +31,32 @@ const createTask = async (req, res , next) => {
 
 const getTasks = async (req, res, next) => {
     try {
-        const { page, limit } = req.query;
+        const { page, limit , minReward , maxReward , status } = req.query;
 
         const skip = (page - 1) * limit;
 
+        const filter = {
+            status
+        };
+
+        if (minReward || maxReward) {
+            filter.reward = {};
+
+            if (minReward) {
+                filter.reward.$gte = minReward;
+            }
+
+            if (maxReward) {
+                filter.reward.$lte = maxReward;
+            }
+        }
+
         const [tasks, totalTasks] = await Promise.all([
-            Task.find({ status: "open" })
+            Task.find(filter)
                 .skip(skip)
                 .limit(limit),
 
-            Task.countDocuments({ status: "open" })
+            Task.countDocuments(filter)
         ]);
 
         const totalPages = Math.ceil(totalTasks / limit);
@@ -52,7 +68,9 @@ const getTasks = async (req, res, next) => {
                 page,
                 limit,
                 totalTasks,
-                totalPages
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
             }
         });
     } catch (error) {
