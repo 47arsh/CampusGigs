@@ -26,7 +26,13 @@ const validate = (schemas) => {
                 });
             }
 
-            req.query = result.data;
+            // req.query is read-only, so don't replace it.
+            // Instead, update its existing properties.
+            Object.keys(req.query).forEach((key) => {
+                delete req.query[key];
+            });
+
+            Object.assign(req.query, result.data);
         }
 
         // Validate route parameters
