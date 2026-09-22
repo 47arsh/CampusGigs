@@ -67,6 +67,28 @@ class RAGRetriever:
         )
         return self.vector_store._collection.count()
 
+    def search(self, query: str, k: int = 3):
+        query_embedding = self.embeddings.embed_query(query)
+        results = self.vector_store._collection.query(
+            query_embeddings=[query_embedding],
+            n_results=k,
+            include=["documents", "metadatas", "distances"],
+        )
+
+        documents = results["documents"][0]
+        metadatas = results["metadatas"][0]
+        distances = results["distances"][0]
+
+        return [
+            {
+                "text": document,
+                "source": metadata.get("source", "unknown"),
+                "source_filename": metadata.get("source_filename", "unknown"),
+                "distance": distance,
+            }
+            for document, metadata, distance in zip(documents, metadatas, distances)
+        ]
+
     def similarity_search(self, question: str, k: int = 4):
         if not self.vector_store:
             raise RuntimeError("The vector store is not available. Run ingestion with a valid Gemini API key.")
@@ -86,4 +108,22 @@ class RAGRetriever:
                 },
             })
         return formatted
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    ROOT = Path(__file__).resolve().parents[1]
+    load_dotenv(ROOT / ".env")
+    retriever = RAGRetriever(persist_directory=ROOT / "chroma_db")
+
+    for query in [
+        "What happens if I cancel a gig?",
+        "What are the rules for posting tasks?",
+        "What should I do if I feel unsafe?",
+    ]:
+        print(f"\nQuery: {query}")
+        for index, result in enumerate(retriever.search(query), start=1):
+            print(f"\n{index}. {result['source_filename']} (distance: {result['distance']})")
+            print(result["text"])
 
