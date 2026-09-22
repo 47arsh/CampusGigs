@@ -1,5 +1,10 @@
-node_modules/
+.venv/
+**/.venv/
+__pycache__/
+*.pyc
 .env
-.env.*
+**/.env
 !.env.example
+node_modules/
 dist/
+ai-service/chroma_db/
