@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from services.rag_service import RAGService
 
@@ -24,7 +24,7 @@ app = FastAPI(title="CampusGigs AI", version="1.0.0", lifespan=lifespan)
 
 
 class ChatRequest(BaseModel):
-    question: str
+    message: str = Field(min_length=1)
 
 
 @app.get("/health")
@@ -34,12 +34,12 @@ def health():
 
 @app.post("/chat")
 def chat(request: ChatRequest):
-    question = (request.question or "").strip()
-    if not question:
-        raise HTTPException(status_code=400, detail="Question is required.")
+    message = request.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required.")
 
     try:
-        result = service.generate_answer(question)
+        result = service.generate_answer(message)
         return result
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
