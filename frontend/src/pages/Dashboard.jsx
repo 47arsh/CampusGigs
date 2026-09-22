@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import AiAssistant from "../components/AiAssistant.jsx";
 import Navbar from "../components/Navbar.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -205,6 +206,7 @@ function Dashboard() {
           <button onClick={() => setTab("create")} className={tabClass("create")}>Post a task</button>
           <button onClick={() => setTab("posted")} className={tabClass("posted")}>My posted ({posted.length})</button>
           <button onClick={() => setTab("accepted")} className={tabClass("accepted")}>My gigs ({accepted.length})</button>
+          <button onClick={() => setTab("assistant")} className={tabClass("assistant")}>AI Assistant</button>
         </div>
 
         {(error || message) && (
@@ -239,6 +241,8 @@ function Dashboard() {
             <TaskGrid loading={loading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} />
           </section>
         )}
+
+        {tab === "assistant" && <AiAssistant />}
 
         {tab === "create" && (
           <section className="mt-7 max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
