@@ -1,5 +1,7 @@
 import sys
 from pathlib import Path
+
+from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -7,7 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from rag.retriever import RAGRetriever
+
+load_dotenv(ROOT / ".env")
+
 KNOWLEDGE_DIR = ROOT / "knowledge"
+CHROMA_DIR = ROOT / "chroma_db"
 
 
 def load_documents():
@@ -37,13 +44,12 @@ def split_documents(documents):
 def main():
     documents = load_documents()
     chunks = split_documents(documents)
+    retriever = RAGRetriever(persist_directory=CHROMA_DIR)
+    indexed_count = retriever.index_documents(chunks)
 
     print(f"Loaded {len(documents)} documents from {KNOWLEDGE_DIR}.")
     print(f"Created {len(chunks)} chunks.")
-    print("\nExample chunks:")
-    for index, chunk in enumerate(chunks[:3], start=1):
-        print(f"\n[{index}] metadata={chunk.metadata}")
-        print(chunk.page_content[:300].replace("\n", " "))
+    print(f"Indexed {indexed_count} chunks in {CHROMA_DIR}.")
 
 
 if __name__ == "__main__":

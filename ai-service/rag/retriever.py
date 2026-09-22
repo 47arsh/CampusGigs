@@ -1,74 +1,71 @@
 import os
 from pathlib import Path
 
-from langchain.chains import LLMChain
-from langchain_core.documents import Document
 from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+DEFAULT_EMBEDDING_MODEL = "gemini-embedding-2-preview"
+COLLECTION_NAME = "campusgigs_kb"
 
 
 class RAGRetriever:
     def __init__(
         self,
         persist_directory: str | os.PathLike[str],
-        embedding_model: str = "models/text-embedding-004",
-        llm_model: str = "gemini-1.5-flash",
+        embedding_model: str | None = None,
     ):
         self.persist_directory = str(Path(persist_directory))
-        self.embedding_model = embedding_model
-        self.llm_model = llm_model
-        self.embeddings = None
-        if os.getenv("GEMINI_API_KEY"):
-            self.embeddings = GoogleGenerativeAIEmbeddings(model=self.embedding_model)
-        self.vector_store = (
-            Chroma(
+        self.embedding_model = embedding_model or os.getenv(
+            "GEMINI_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL
+        )
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is required before indexing documents.")
+
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            model=self.embedding_model,
+            google_api_key=api_key,
+        )
+        self.vector_store = Chroma(
+            persist_directory=self.persist_directory,
+            embedding_function=self.embeddings,
+            collection_name=COLLECTION_NAME,
+        )
+
+    def index_documents(self, chunks, reset=True):
+        if reset:
+            self.vector_store.delete_collection()
+            self.vector_store = Chroma(
                 persist_directory=self.persist_directory,
                 embedding_function=self.embeddings,
-                collection_name="campusgigs_kb",
+                collection_name=COLLECTION_NAME,
             )
-            if self.embeddings
-            else None
-        )
 
-    def load_documents(self, knowledge_dir: str | os.PathLike[str]):
-        docs = []
-        for path in sorted(Path(knowledge_dir).glob("*.md")):
-            text = path.read_text(encoding="utf-8")
-            docs.append(
-                Document(
-                    page_content=text,
-                    metadata={
-                        "source": path.name,
-                        "document_name": path.stem,
-                        "document_type": "markdown",
-                    },
-                )
-            )
-        return docs
-
-    def split_documents(self, documents, chunk_size: int = 900, chunk_overlap: int = 150):
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            length_function=len,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-        return splitter.split_documents(documents)
-
-    def ingest(self, documents):
-        if not self.embeddings or not self.vector_store:
-            raise RuntimeError("GEMINI_API_KEY is required before ingesting documents.")
-
-        chunks = self.split_documents(documents)
         for index, chunk in enumerate(chunks):
             chunk.metadata.setdefault("chunk_index", index)
-            chunk.metadata.setdefault("section", f"chunk-{index + 1}")
-            chunk.metadata.setdefault("document_name", chunk.metadata.get("document_name", "unknown"))
-            chunk.metadata.setdefault("source", chunk.metadata.get("source", "unknown"))
+            chunk.metadata.setdefault("source_filename", Path(chunk.metadata["source"]).name)
 
-        self.vector_store.add_documents(chunks)
-        return len(chunks)
+        ids = [f"chunk-{index}" for index in range(len(chunks))]
+        texts = [chunk.page_content for chunk in chunks]
+        metadatas = [chunk.metadata for chunk in chunks]
+
+        # Gemini Embedding 2 aggregates a list of plain strings into one vector.
+        # Embed every chunk independently so Chroma receives one vector per ID.
+        embeddings = [self.embeddings.embed_query(text) for text in texts]
+
+        if len(embeddings) != len(chunks):
+            raise RuntimeError(
+                "Expected one embedding per chunk, "
+                f"but received {len(embeddings)} embeddings for {len(chunks)} chunks."
+            )
+
+        self.vector_store._collection.upsert(
+            ids=ids,
+            embeddings=embeddings,
+            documents=texts,
+            metadatas=metadatas,
+        )
+        return self.vector_store._collection.count()
 
     def similarity_search(self, question: str, k: int = 4):
         if not self.vector_store:
@@ -90,7 +87,3 @@ class RAGRetriever:
             })
         return formatted
 
-    def get_llm(self):
-        if not os.getenv("GEMINI_API_KEY"):
-            raise RuntimeError("GEMINI_API_KEY is required to generate answers.")
-        return ChatGoogleGenerativeAI(model=self.llm_model, temperature=0.2)
