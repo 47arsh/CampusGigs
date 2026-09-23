@@ -45,6 +45,8 @@ Once a task is accepted:
 
 Users should review the task description before accepting it.
 
+A user cannot accept the task that he created by himself.
+
 ---
 
 ## Task Completion

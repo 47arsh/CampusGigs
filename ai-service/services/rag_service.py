@@ -109,7 +109,7 @@ class RAGService:
 
         sources = [
             {
-                "source": item["source"],
+                "source": item["source_filename"],
                 "source_filename": item["source_filename"],
                 "distance": item["distance"],
             }

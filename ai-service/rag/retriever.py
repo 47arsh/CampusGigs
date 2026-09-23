@@ -24,7 +24,7 @@ class RAGRetriever:
 
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=self.embedding_model,
-            google_api_key=api_key,
+            api_key=api_key,
         )
         self.vector_store = Chroma(
             persist_directory=self.persist_directory,
@@ -33,13 +33,8 @@ class RAGRetriever:
         )
 
     def index_documents(self, chunks, reset=True):
-        if reset:
-            self.vector_store.delete_collection()
-            self.vector_store = Chroma(
-                persist_directory=self.persist_directory,
-                embedding_function=self.embeddings,
-                collection_name=COLLECTION_NAME,
-            )
+        if not chunks:
+            raise RuntimeError("No document chunks were produced; existing collection was not changed.")
 
         for index, chunk in enumerate(chunks):
             chunk.metadata.setdefault("chunk_index", index)
@@ -65,9 +60,19 @@ class RAGRetriever:
             documents=texts,
             metadatas=metadatas,
         )
+
+        if reset:
+            current_ids = set(self.vector_store._collection.get(include=[]).get("ids", []))
+            stale_ids = sorted(current_ids.difference(ids))
+            if stale_ids:
+                self.vector_store._collection.delete(ids=stale_ids)
+
         return self.vector_store._collection.count()
 
     def search(self, query: str, k: int = 3):
+        if self.vector_store._collection.count() == 0:
+            raise RuntimeError("The knowledge base is empty. Run ingestion before asking questions.")
+
         query_embedding = self.embeddings.embed_query(query)
         results = self.vector_store._collection.query(
             query_embeddings=[query_embedding],

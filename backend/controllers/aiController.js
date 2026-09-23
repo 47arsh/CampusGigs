@@ -27,8 +27,21 @@ const chatWithAi = async (req, res) => {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            return res.status(502).json({
-                message: data.detail || "AI service could not process the request"
+            const status = response.status === 429
+                ? 429
+                : response.status >= 500
+                    ? response.status === 502 ? 502 : 500
+                    : 400;
+
+            console.error("AI service request failed", {
+                status: response.status,
+                upstreamMessage: typeof data.detail === "string" ? data.detail : undefined
+            });
+
+            return res.status(status).json({
+                message: typeof data.detail === "string"
+                    ? data.detail
+                    : "AI service could not process the request"
             });
         }
 
@@ -37,6 +50,7 @@ const chatWithAi = async (req, res) => {
             sources: data.sources || []
         });
     } catch (error) {
+        console.error("AI service is unreachable", { name: error.name });
         return res.status(503).json({
             message: "AI service is unavailable"
         });

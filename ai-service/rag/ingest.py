@@ -28,6 +28,7 @@ def load_documents():
     documents = sorted(loader.load(), key=lambda document: document.metadata.get("source", ""))
     for document in documents:
         source_path = Path(document.metadata["source"])
+        document.metadata["source"] = source_path.name
         document.metadata["source_filename"] = source_path.name
     return documents
 
@@ -43,7 +44,13 @@ def split_documents(documents):
 
 def main():
     documents = load_documents()
+    if not documents:
+        raise RuntimeError(f"No Markdown documents found in {KNOWLEDGE_DIR}; existing collection was not changed.")
+
     chunks = split_documents(documents)
+    if not chunks:
+        raise RuntimeError("Document loading produced zero chunks; existing collection was not changed.")
+
     retriever = RAGRetriever(persist_directory=CHROMA_DIR)
     indexed_count = retriever.index_documents(chunks)
 
