@@ -1,4 +1,6 @@
 import Task from "../models/Task.js";
+import User from "../models/User.js";
+import { createAndEmitNotification } from "../services/notificationService.js";
 
 const createTask = async (req, res , next) => {
     try {
@@ -161,6 +163,15 @@ const acceptTask = async (req, res , next) => {
             });
         }
 
+        const acceptingUser = await User.findById(userId).select("name");
+        await createAndEmitNotification({
+            recipient: updatedTask.createdBy,
+            type: "task_accepted",
+            message: `${acceptingUser?.name || "A student"} accepted your task.`,
+            task: updatedTask._id,
+            io: req.app.get("io")
+        });
+
         res.status(200).json({
             message: "Task accepted successfully",
             task: updatedTask
@@ -191,6 +202,14 @@ const completeTask = async (req,res , next) => {
                 message: "Task not found, unavailable, or cannot be completed by the user"
             });
         }
+
+        await createAndEmitNotification({
+            recipient: updatedTask.assignedTo,
+            type: "task_completed",
+            message: "Your task has been marked as completed.",
+            task: updatedTask._id,
+            io: req.app.get("io")
+        });
 
         res.status(200).json({
             message: "Task completed successfully",
@@ -238,6 +257,16 @@ const cancelTask = async(req,res , next) => {
         const updatedTask = await Task.findByIdAndUpdate(taskId, {
             status: "cancelled"
         }, { new: true });
+
+        if (updatedTask.assignedTo) {
+            await createAndEmitNotification({
+                recipient: updatedTask.assignedTo,
+                type: "task_cancelled",
+                message: `The task "${updatedTask.title}" has been cancelled.`,
+                task: updatedTask._id,
+                io: req.app.get("io")
+            });
+        }
 
         res.status(200).json({
             message: "Task cancelled successfully",
