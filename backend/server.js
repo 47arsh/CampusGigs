@@ -29,6 +29,7 @@ app.use(cors({
 app.use(express.json());
 
 app.locals.io = io;
+app.set("io", io);
 
 app.use("/api/tasks", taskRoutes);
 app.use("/api/auth", authRoutes);
