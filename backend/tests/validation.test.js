@@ -92,6 +92,16 @@ describe("request validation", () => {
         assert.equal(response.body.message, "Validation failed");
     });
 
+    it("rejects request bodies above the size limit", async () => {
+        const response = await jsonRequest(testServer.baseUrl, "/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email: "user@example.test", password: "x".repeat(40_000) }),
+        });
+
+        assert.equal(response.status, 413);
+        assert.equal(response.body.message, "Request payload is too large");
+    });
+
     it("returns 400 for malformed JSON instead of 500", async () => {
         const response = await request(testServer.baseUrl, "/api/auth/login", {
             method: "POST",

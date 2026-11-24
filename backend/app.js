@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { env } from "./config/env.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -11,6 +12,8 @@ const app = express();
 
 app.disable("x-powered-by");
 
+app.use(helmet());
+
 if (env.TRUST_PROXY !== undefined) {
     app.set("trust proxy", env.TRUST_PROXY);
 }
@@ -21,7 +24,7 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: "32kb" }));
 
 app.use("/api/tasks", taskRoutes);
 app.use("/api/auth", authRoutes);
