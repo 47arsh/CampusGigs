@@ -153,7 +153,7 @@ const acceptTask = async (req, res , next) => {
                 assignedTo: userId
             },
             {
-                new: true
+                returnDocument: "after"
             }
         );
 
@@ -194,7 +194,7 @@ const completeTask = async (req,res , next) => {
         }, {
             status: "completed"
         }, {
-            new: true
+            returnDocument: "after"
         });
 
         if(!updatedTask){
@@ -227,7 +227,29 @@ const cancelTask = async(req,res , next) => {
         const taskId = req.params.id;
         const userId = req.user.userId;
 
-        const task = await Task.findById(taskId);
+        // Atomic guard: only the poster can cancel, and only an open task.
+        const cancelledTask = await Task.findOneAndUpdate(
+            {
+                _id: taskId,
+                createdBy: userId,
+                status: "open"
+            },
+            {
+                status: "cancelled"
+            },
+            {
+                returnDocument: "after"
+            }
+        );
+
+        if (cancelledTask) {
+            return res.status(200).json({
+                message: "Task cancelled successfully",
+                task: cancelledTask
+            });
+        }
+
+        const task = await Task.findById(taskId).select("createdBy status");
 
         if(!task){
             return res.status(404).json({
@@ -255,23 +277,9 @@ const cancelTask = async(req,res , next) => {
                 message: "Accepted tasks cannot be cancelled"
             });
         }
-        const updatedTask = await Task.findByIdAndUpdate(taskId, {
-            status: "cancelled"
-        }, { new: true });
 
-        if (updatedTask.assignedTo) {
-            await createAndEmitNotification({
-                recipient: updatedTask.assignedTo,
-                type: "task_cancelled",
-                message: `The task "${updatedTask.title}" has been cancelled.`,
-                task: updatedTask._id,
-                io: req.app.get("io")
-            });
-        }
-
-        res.status(200).json({
-            message: "Task cancelled successfully",
-            task: updatedTask
+        return res.status(400).json({
+            message: "Task could not be cancelled"
         });
     }
     catch(error){

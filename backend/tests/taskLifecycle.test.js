@@ -88,4 +88,57 @@ describe("task lifecycle notifications", () => {
         });
         assert.equal(workerNotifications, 0, "the worker should not notify themselves");
     });
+
+    it("lets the poster cancel an open task exactly once", async () => {
+        const cancelable = await Task.create({
+            title: "Cancelable test task",
+            description: "A task used to verify cancellation rules.",
+            reward: 50,
+            pickupLocation: "Test pickup",
+            dropLocation: "Test drop",
+            createdBy: creator._id
+        });
+
+        try {
+            const first = await jsonRequest(testServer.baseUrl, `/api/tasks/${cancelable._id}/cancel`, {
+                method: "PATCH",
+                token: tokenFor(creator)
+            });
+            assert.equal(first.status, 200);
+            assert.equal(first.body.task.status, "cancelled");
+
+            const second = await jsonRequest(testServer.baseUrl, `/api/tasks/${cancelable._id}/cancel`, {
+                method: "PATCH",
+                token: tokenFor(creator)
+            });
+            assert.equal(second.status, 400);
+            assert.equal(second.body.message, "Task is already cancelled");
+        } finally {
+            await Task.deleteOne({ _id: cancelable._id });
+        }
+    });
+
+    it("rejects cancellation attempts by non-posters", async () => {
+        const cancelable = await Task.create({
+            title: "Protected test task",
+            description: "A task used to verify cancellation authorization.",
+            reward: 50,
+            pickupLocation: "Test pickup",
+            dropLocation: "Test drop",
+            createdBy: creator._id
+        });
+
+        try {
+            const response = await jsonRequest(testServer.baseUrl, `/api/tasks/${cancelable._id}/cancel`, {
+                method: "PATCH",
+                token: tokenFor(worker)
+            });
+            assert.equal(response.status, 403);
+
+            const stored = await Task.findById(cancelable._id);
+            assert.equal(stored.status, "open");
+        } finally {
+            await Task.deleteOne({ _id: cancelable._id });
+        }
+    });
 });
