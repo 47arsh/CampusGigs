@@ -1,11 +1,11 @@
 import "./config/loadEnv.js";
 import http from "node:http";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { Server } from "socket.io";
 import app from "./app.js";
 import connectDB from "./config/db.js";
 import { env } from "./config/env.js";
+import { authenticateSocket, disconnectWhenTokenExpires } from "./middleware/socketAuth.js";
 import { logger } from "./utils/logger.js";
 
 const httpServer = http.createServer(app);
@@ -19,30 +19,7 @@ const io = new Server(httpServer, {
 app.locals.io = io;
 app.set("io", io);
 
-io.use((socket, next) => {
-    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
-
-    if (!token) {
-        return next(new Error("Authentication failed"));
-    }
-
-    const jwtToken = typeof token === "string" && token.startsWith("Bearer ")
-        ? token.substring(7)
-        : token;
-
-    try {
-        const decoded = jwt.verify(jwtToken, env.JWT_SECRET, { algorithms: ["HS256"] });
-
-        if (typeof decoded.userId !== "string" || !/^[a-f0-9]{24}$/i.test(decoded.userId)) {
-            return next(new Error("Authentication failed"));
-        }
-
-        socket.user = decoded;
-        next();
-    } catch (error) {
-        next(new Error("Authentication failed"));
-    }
-});
+io.use(authenticateSocket);
 
 io.on("connection", (socket) => {
     const userId = socket.user?.userId;
@@ -52,6 +29,7 @@ io.on("connection", (socket) => {
         return;
     }
 
+    disconnectWhenTokenExpires(socket);
     socket.join(`user:${userId}`);
 });
 
