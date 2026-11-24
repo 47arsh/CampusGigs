@@ -81,6 +81,17 @@ describe("request validation", () => {
         assert.equal(response.body.message, "Validation failed");
     });
 
+    it("rejects an invalid notification id", async () => {
+        const token = jwt.sign({ userId: "0123456789abcdef01234567" }, process.env.JWT_SECRET);
+        const response = await jsonRequest(testServer.baseUrl, "/api/notifications/not-an-id/read", {
+            method: "PATCH",
+            token,
+        });
+
+        assert.equal(response.status, 400);
+        assert.equal(response.body.message, "Validation failed");
+    });
+
     it("returns 400 for malformed JSON instead of 500", async () => {
         const response = await request(testServer.baseUrl, "/api/auth/login", {
             method: "POST",

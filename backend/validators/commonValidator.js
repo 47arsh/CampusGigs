@@ -1,13 +1,11 @@
 import { z } from "zod";
-import mongoose from "mongoose";
 
-const taskIdSchema = z.object({
-    id: z.string().refine(
-        (id) => mongoose.Types.ObjectId.isValid(id),
-        {
-            message: "Invalid task ID"
-        }
-    )
+const objectIdSchema = (message) => z.object({
+    id: z.string().regex(/^[a-fA-F0-9]{24}$/, { message })
 });
 
+const taskIdSchema = objectIdSchema("Invalid task ID");
+const notificationIdSchema = objectIdSchema("Invalid notification ID");
+
+export { notificationIdSchema };
 export default taskIdSchema;
