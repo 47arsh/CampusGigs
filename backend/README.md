@@ -9,6 +9,7 @@ Express 5 REST API and Socket.IO server for the CampusGigs campus marketplace. I
 | `npm run dev` | Start with nodemon on changes |
 | `npm start` | Production entry point (`node server.js`) |
 | `npm test` | Run the `node:test` suite |
+| `npm run test:e2e` | End-to-end lifecycle check against a throwaway local database |
 
 Requires Node.js 20+ and a reachable MongoDB instance.
 

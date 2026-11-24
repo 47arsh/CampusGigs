@@ -347,3 +347,7 @@ and pull request via `.github/workflows/ci.yml`.
 * **Frontend** — build with `npm run build` and host `dist/`; set
   `VITE_API_URL` and `VITE_SOCKET_URL` at build time to the public backend
   URLs.
+
+For the full staging checklist (environment variables, hosting, MongoDB
+indexes, Chroma persistence, smoke tests, and rollback), see
+[`docs/staging-deployment.md`](docs/staging-deployment.md).

@@ -14,7 +14,7 @@ React 19 + Vite single-page client for the CampusGigs campus marketplace. It han
 
 ## Configuration
 
-Create `frontend/.env` (or `.env.local`) when the backend is not on the default port:
+Create `frontend/.env` (or `.env.local`) when the backend is not on the default port; see `.env.example` for the template:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
