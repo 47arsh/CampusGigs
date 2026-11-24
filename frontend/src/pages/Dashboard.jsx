@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AiAssistant from "../components/AiAssistant.jsx";
 import Navbar from "../components/Navbar.jsx";
 import { api } from "../lib/api.js";
@@ -104,37 +104,68 @@ function Dashboard() {
   const [accepted, setAccepted] = useState([]);
   const [form, setForm] = useState(emptyTask);
   const [filters, setFilters] = useState({ minReward: "", maxReward: "" });
-  const [loading, setLoading] = useState(true);
+  const [browseLoading, setBrowseLoading] = useState(true);
+  const [listsLoading, setListsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const loadTasks = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ status: "open", limit: "50" });
-      if (filters.minReward) params.set("minReward", filters.minReward);
-      if (filters.maxReward) params.set("maxReward", filters.maxReward);
-
-      const [available, myPosted, myAccepted] = await Promise.all([
-        api("/tasks?" + params),
-        api("/tasks/my/posted", { token }),
-        api("/tasks/my/accepted", { token }),
-      ]);
-
-      setTasks(available.tasks);
-      setPosted(myPosted.tasks);
-      setAccepted(myAccepted.tasks);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, token]);
+  const [browseRefresh, setBrowseRefresh] = useState(0);
+  const [listsRefresh, setListsRefresh] = useState(0);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    let active = true;
+    const params = new URLSearchParams({ status: "open", limit: "50" });
+    if (filters.minReward) params.set("minReward", filters.minReward);
+    if (filters.maxReward) params.set("maxReward", filters.maxReward);
+
+    api("/tasks?" + params)
+      .then((available) => {
+        if (active) setTasks(available.tasks);
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message);
+      })
+      .finally(() => {
+        if (active) setBrowseLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [filters, browseRefresh]);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      api("/tasks/my/posted?limit=100", { token }),
+      api("/tasks/my/accepted?limit=100", { token }),
+    ])
+      .then(([myPosted, myAccepted]) => {
+        if (active) {
+          setPosted(myPosted.tasks);
+          setAccepted(myAccepted.tasks);
+        }
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message);
+      })
+      .finally(() => {
+        if (active) setListsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [token, listsRefresh]);
+
+  function refreshAll() {
+    setBrowseLoading(true);
+    setListsLoading(true);
+    setBrowseRefresh((count) => count + 1);
+    setListsRefresh((count) => count + 1);
+  }
 
   async function updateTask(taskId, operation, successMessage) {
     setError("");
@@ -144,7 +175,7 @@ function Dashboard() {
         token,
       });
       setMessage(successMessage);
-      await loadTasks();
+      refreshAll();
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -163,12 +194,17 @@ function Dashboard() {
       setForm(emptyTask);
       setMessage("Your task is live and ready for helpers.");
       setTab("posted");
-      await loadTasks();
+      refreshAll();
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  function updateFilters(nextFilters) {
+    setBrowseLoading(true);
+    setFilters(nextFilters);
   }
 
   function updateForm(field, value) {
@@ -219,26 +255,26 @@ function Dashboard() {
           <section className="mt-7">
             <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
               <Field label="Minimum reward">
-                <input type="number" min="10" value={filters.minReward} onChange={(event) => setFilters({ ...filters, minReward: event.target.value })} className="input" placeholder="₹10" />
+                <input type="number" min="10" value={filters.minReward} onChange={(event) => updateFilters({ ...filters, minReward: event.target.value })} className="input" placeholder="₹10" />
               </Field>
               <Field label="Maximum reward">
-                <input type="number" min="10" value={filters.maxReward} onChange={(event) => setFilters({ ...filters, maxReward: event.target.value })} className="input" placeholder="Any" />
+                <input type="number" min="10" value={filters.maxReward} onChange={(event) => updateFilters({ ...filters, maxReward: event.target.value })} className="input" placeholder="Any" />
               </Field>
-              <button onClick={() => setFilters({ minReward: "", maxReward: "" })} className="pb-2 text-sm font-semibold text-indigo-600">Clear filters</button>
+              <button onClick={() => updateFilters({ minReward: "", maxReward: "" })} className="pb-2 text-sm font-semibold text-indigo-600">Clear filters</button>
             </div>
-            <TaskGrid loading={loading} tasks={tasks} emptyMessage="No open tasks match these filters." actionLabel="Accept task" onAction={(id) => updateTask(id, "accept", "Task accepted — it is now in My gigs.")} />
+            <TaskGrid loading={browseLoading} tasks={tasks} emptyMessage="No open tasks match these filters." actionLabel="Accept task" onAction={(id) => updateTask(id, "accept", "Task accepted — it is now in My gigs.")} />
           </section>
         )}
 
         {tab === "posted" && (
           <section className="mt-7">
-            <TaskGrid loading={loading} tasks={posted} emptyMessage="You have not posted a task yet." actionLabel="Cancel task" onAction={(id) => updateTask(id, "cancel", "Task cancelled.")} />
+            <TaskGrid loading={listsLoading} tasks={posted} emptyMessage="You have not posted a task yet." actionLabel="Cancel task" onAction={(id) => updateTask(id, "cancel", "Task cancelled.")} />
           </section>
         )}
 
         {tab === "accepted" && (
           <section className="mt-7">
-            <TaskGrid loading={loading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} />
+            <TaskGrid loading={listsLoading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} />
           </section>
         )}
 
