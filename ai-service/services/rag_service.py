@@ -12,7 +12,15 @@ class RAGService:
     def __init__(self, knowledge_dir: str | os.PathLike[str] = "./knowledge", persist_directory: str | os.PathLike[str] = "./chroma_db"):
         self.knowledge_dir = Path(knowledge_dir)
         self.persist_directory = Path(persist_directory)
-        self.retriever = RAGRetriever(persist_directory=self.persist_directory)
+        self._retriever: RAGRetriever | None = None
+
+    @property
+    def retriever(self) -> RAGRetriever:
+        # Built on first use so the process can start (and serve /health)
+        # before a Gemini key or the vector store is available.
+        if self._retriever is None:
+            self._retriever = RAGRetriever(persist_directory=self.persist_directory)
+        return self._retriever
 
     def load_documents(self):
         docs = []
@@ -37,34 +45,18 @@ class RAGService:
             metadata = item.get("metadata", {})
             source = item.get("source") or metadata.get("source") or "unknown"
             source_filename = item.get("source_filename") or metadata.get("source_filename") or source
+            section = item.get("section") or metadata.get("section")
+            header = f"Source: {source_filename}"
+            if section:
+                header = f"{header}\nSection: {section}"
             context_parts.append(
-                f"Source: {source_filename}\nContent: {content}\n"
+                f"{header}\nContent: {content}\n"
             )
         return "\n---\n".join(context_parts)
 
     def build_prompt(self, question: str, retrieved_context):
         formatted_context = self.format_context(retrieved_context)
         return SYSTEM_PROMPT.format(context=formatted_context, question=question)
-
-    def _as_context_items(self, results):
-        items = []
-        seen = set()
-        for result in results:
-            metadata = result.get("metadata", {})
-            source = metadata.get("source", "unknown")
-            section = metadata.get("section") or metadata.get("document_name") or "General"
-            key = (source, section)
-            if key in seen:
-                continue
-            seen.add(key)
-            items.append({
-                "content": result.get("content", ""),
-                "metadata": {
-                    "source": source,
-                    "section": section,
-                },
-            })
-        return items
 
     def generate_answer(self, question: str):
         question = (question or "").strip()

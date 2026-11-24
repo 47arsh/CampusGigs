@@ -89,30 +89,11 @@ class RAGRetriever:
                 "text": document,
                 "source": metadata.get("source", "unknown"),
                 "source_filename": metadata.get("source_filename", "unknown"),
+                "section": metadata.get("section"),
                 "distance": distance,
             }
             for document, metadata, distance in zip(documents, metadatas, distances)
         ]
-
-    def similarity_search(self, question: str, k: int = 4):
-        if not self.vector_store:
-            raise RuntimeError("The vector store is not available. Run ingestion with a valid Gemini API key.")
-
-        results = self.vector_store.similarity_search_with_score(question, k=k)
-        formatted = []
-        for document, score in results:
-            metadata = dict(document.metadata or {})
-            formatted.append({
-                "content": document.page_content,
-                "score": score,
-                "metadata": {
-                    "source": metadata.get("source", "unknown"),
-                    "section": metadata.get("section") or metadata.get("document_name") or "General",
-                    "document_name": metadata.get("document_name", "unknown"),
-                    "chunk_index": metadata.get("chunk_index"),
-                },
-            })
-        return formatted
 
 
 if __name__ == "__main__":
