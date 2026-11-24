@@ -72,7 +72,6 @@ function Login() {
               Password
               <input
                 required
-                minLength="6"
                 type="password"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
