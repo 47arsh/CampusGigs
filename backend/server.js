@@ -29,7 +29,12 @@ io.use((socket, next) => {
         : token;
 
     try {
-        const decoded = jwt.verify(jwtToken, env.JWT_SECRET);
+        const decoded = jwt.verify(jwtToken, env.JWT_SECRET, { algorithms: ["HS256"] });
+
+        if (typeof decoded.userId !== "string" || !/^[a-f0-9]{24}$/i.test(decoded.userId)) {
+            return next(new Error("Authentication failed"));
+        }
+
         socket.user = decoded;
         next();
     } catch (error) {
@@ -46,11 +51,6 @@ io.on("connection", (socket) => {
     }
 
     socket.join(`user:${userId}`);
-    console.log(`Socket connected for user ${userId}`);
-
-    socket.on("disconnect", () => {
-        console.log(`Socket disconnected for user ${userId}`);
-    });
 });
 
 const startServer = async () => {

@@ -1,4 +1,7 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
+
+const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 
 const authMiddleware = (req, res, next) => {
     try {
@@ -14,8 +17,15 @@ const authMiddleware = (req, res, next) => {
 
         const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRET
+            env.JWT_SECRET,
+            { algorithms: ["HS256"] }
         );
+
+        if (typeof decoded.userId !== "string" || !OBJECT_ID_PATTERN.test(decoded.userId)) {
+            return res.status(401).json({
+                message: "Invalid or expired token"
+            });
+        }
 
         req.user = decoded;
 

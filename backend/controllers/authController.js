@@ -61,9 +61,9 @@ const loginUser = async (req, res, next) => {
         }
 
         const token = jwt.sign(
-            { userId: user._id },
+            { userId: user._id.toString() },
             env.JWT_SECRET,
-            { expiresIn: "1h" }
+            { expiresIn: "1h", algorithm: "HS256" }
         );
 
         res.status(200).json({
@@ -76,4 +76,20 @@ const loginUser = async (req, res, next) => {
     }
 };
 
-export { registerUser, loginUser };
+const getCurrentUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.userId).select("name email");
+
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid or expired token"
+            });
+        }
+
+        res.status(200).json({ user });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { registerUser, loginUser, getCurrentUser };
