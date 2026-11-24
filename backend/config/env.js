@@ -14,8 +14,16 @@ const envSchema = z.object({
     AI_SERVICE_URL: z.url("AI_SERVICE_URL must be a valid URL").optional(),
     AI_SERVICE_TOKEN: z.string().min(1, "AI_SERVICE_TOKEN cannot be empty").optional(),
     TRUST_PROXY: z
-        .enum(["true", "false"])
-        .transform((value) => value === "true")
+        .union([
+            z.literal("true"),
+            z.literal("false"),
+            z.coerce.number().int().min(1, "TRUST_PROXY must be a hop count of at least 1")
+        ])
+        .transform((value) => {
+            if (value === "true") return 1;
+            if (value === "false") return false;
+            return value;
+        })
         .optional(),
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).optional()
 });
