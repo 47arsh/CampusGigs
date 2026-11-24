@@ -105,6 +105,9 @@ function Dashboard() {
   const [form, setForm] = useState(emptyTask);
   const [filters, setFilters] = useState({ minReward: "", maxReward: "" });
   const [browseLoading, setBrowseLoading] = useState(true);
+  const [browseLoadingMore, setBrowseLoadingMore] = useState(false);
+  const [browseHasNext, setBrowseHasNext] = useState(false);
+  const [browsePage, setBrowsePage] = useState(1);
   const [listsLoading, setListsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -115,13 +118,17 @@ function Dashboard() {
 
   useEffect(() => {
     let active = true;
-    const params = new URLSearchParams({ status: "open", limit: "50" });
+    const params = new URLSearchParams({ status: "open", limit: "50", page: "1" });
     if (filters.minReward) params.set("minReward", filters.minReward);
     if (filters.maxReward) params.set("maxReward", filters.maxReward);
 
     api("/tasks?" + params)
       .then((available) => {
-        if (active) setTasks(available.tasks);
+        if (active) {
+          setTasks(available.tasks);
+          setBrowsePage(1);
+          setBrowseHasNext(Boolean(available.pagination?.hasNextPage));
+        }
       })
       .catch((requestError) => {
         if (active) setError(requestError.message);
@@ -202,6 +209,32 @@ function Dashboard() {
     }
   }
 
+  async function loadMoreTasks() {
+    setBrowseLoadingMore(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        status: "open",
+        limit: "50",
+        page: String(browsePage + 1),
+      });
+      if (filters.minReward) params.set("minReward", filters.minReward);
+      if (filters.maxReward) params.set("maxReward", filters.maxReward);
+
+      const available = await api("/tasks?" + params);
+      setTasks((current) => {
+        const seen = new Set(current.map((task) => task._id));
+        return [...current, ...available.tasks.filter((task) => !seen.has(task._id))];
+      });
+      setBrowsePage((page) => page + 1);
+      setBrowseHasNext(Boolean(available.pagination?.hasNextPage));
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBrowseLoadingMore(false);
+    }
+  }
+
   function updateFilters(nextFilters) {
     setBrowseLoading(true);
     setFilters(nextFilters);
@@ -263,6 +296,17 @@ function Dashboard() {
               <button onClick={() => updateFilters({ minReward: "", maxReward: "" })} className="pb-2 text-sm font-semibold text-indigo-600">Clear filters</button>
             </div>
             <TaskGrid loading={browseLoading} tasks={tasks} emptyMessage="No open tasks match these filters." actionLabel="Accept task" onAction={(id) => updateTask(id, "accept", "Task accepted — it is now in My gigs.")} />
+            {browseHasNext && !browseLoading && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={loadMoreTasks}
+                  disabled={browseLoadingMore}
+                  className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {browseLoadingMore ? "Loading more…" : "Load more tasks"}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
