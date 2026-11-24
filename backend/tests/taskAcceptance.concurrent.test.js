@@ -13,6 +13,9 @@ import {
     uniqueEmail
 } from "./helpers/testApp.js";
 
+// Exercise production query semantics: operators must be explicitly trusted.
+mongoose.set("sanitizeFilter", true);
+
 let server;
 let testTaskId;
 let testUserIds = [];
@@ -28,7 +31,7 @@ after(async () => {
         await Task.deleteOne({ _id: testTaskId });
     }
     if (testUserIds.length) {
-        await User.deleteMany({ _id: { $in: testUserIds } });
+        await User.deleteMany({ _id: mongoose.trusted({ $in: testUserIds }) });
     }
     if (server) {
         await server.close();

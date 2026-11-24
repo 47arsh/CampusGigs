@@ -1,6 +1,7 @@
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import Notification from "../models/Notification.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
@@ -11,6 +12,9 @@ import {
     startTestServer,
     uniqueEmail
 } from "./helpers/testApp.js";
+
+// Exercise production query semantics: operators must be explicitly trusted.
+mongoose.set("sanitizeFilter", true);
 
 describe("list pagination", () => {
     let testServer;
@@ -46,7 +50,7 @@ describe("list pagination", () => {
 
     after(async () => {
         await Notification.deleteMany({ recipient: user._id });
-        await Task.deleteMany({ _id: { $in: taskIds } });
+        await Task.deleteMany({ _id: mongoose.trusted({ $in: taskIds }) });
         await User.deleteOne({ _id: user._id });
         await testServer?.close();
         await disconnectTestDb();
@@ -88,5 +92,15 @@ describe("list pagination", () => {
         });
 
         assert.equal(response.status, 400);
+    });
+
+    it("filters tasks by reward range while operators stay trusted", async () => {
+        const inRange = await jsonRequest(testServer.baseUrl, "/api/tasks?minReward=40&maxReward=60");
+        assert.equal(inRange.status, 200);
+        assert.equal(inRange.body.pagination.totalTasks, 3);
+
+        const outOfRange = await jsonRequest(testServer.baseUrl, "/api/tasks?minReward=51");
+        assert.equal(outOfRange.status, 200);
+        assert.equal(outOfRange.body.pagination.totalTasks, 0);
     });
 });

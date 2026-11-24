@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
@@ -42,16 +43,18 @@ const getTasks = async (req, res, next) => {
             status
         };
 
-        if (minReward || maxReward) {
-            filter.reward = {};
+        if (minReward !== undefined || maxReward !== undefined) {
+            const rewardFilter = {};
 
-            if (minReward) {
-                filter.reward.$gte = minReward;
+            if (minReward !== undefined) {
+                rewardFilter.$gte = minReward;
             }
 
-            if (maxReward) {
-                filter.reward.$lte = maxReward;
+            if (maxReward !== undefined) {
+                rewardFilter.$lte = maxReward;
             }
+
+            filter.reward = mongoose.trusted(rewardFilter);
         }
 
         const [tasks, totalTasks] = await Promise.all([
@@ -144,7 +147,7 @@ const acceptTask = async (req, res , next) => {
             {
                 _id: taskId,
                 status: "open",
-                createdBy: { $ne: userId } //ne means not equal. This is to ensure that the user accepting the task is not the owner of the task.
+                createdBy: mongoose.trusted({ $ne: userId }) //ne means not equal. This is to ensure that the user accepting the task is not the owner of the task.
             },
             {
                 status: "accepted",
