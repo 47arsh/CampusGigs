@@ -75,4 +75,27 @@ describe("auth tokens", () => {
 
         assert.equal(response.status, 401);
     });
+
+    it("reports duplicate registration as a conflict", async () => {
+        const response = await jsonRequest(testServer.baseUrl, "/api/auth/register", {
+            method: "POST",
+            body: JSON.stringify({ name: "Auth User", email, password: "correct-horse" })
+        });
+
+        assert.equal(response.status, 409);
+        assert.equal(response.body.message, "User already exists");
+    });
+
+    it("treats case-variant emails as duplicates", async () => {
+        const response = await jsonRequest(testServer.baseUrl, "/api/auth/register", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Auth User",
+                email: email.toUpperCase(),
+                password: "correct-horse"
+            })
+        });
+
+        assert.equal(response.status, 409);
+    });
 });
