@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import AiAssistant from "../components/AiAssistant.jsx";
 import Navbar from "../components/Navbar.jsx";
 import { api } from "../lib/api.js";
@@ -28,6 +29,19 @@ function Field({ label, children }) {
   );
 }
 
+function PersonLink({ person, label }) {
+  if (!person?.name || !person?._id) return null;
+
+  return (
+    <span>
+      {label}{" "}
+      <Link to={"/users/" + person._id} className="font-semibold text-slate-800 hover:text-indigo-600">
+        {person.name}
+      </Link>
+    </span>
+  );
+}
+
 function TaskCard({ task, actionLabel, onAction }) {
   const canAct =
     (actionLabel === "Mark complete" && task.status === "accepted") ||
@@ -50,6 +64,8 @@ function TaskCard({ task, actionLabel, onAction }) {
       <div className="mt-5 grid gap-2 border-t border-slate-100 pt-4 text-sm text-slate-600">
         <span>Pickup: <b className="text-slate-800">{task.pickupLocation}</b></span>
         <span>Drop: <b className="text-slate-800">{task.dropLocation}</b></span>
+        <PersonLink person={task.createdBy} label="Posted by" />
+        <PersonLink person={task.assignedTo} label="Assigned to" />
       </div>
 
       <div className="mt-5 flex items-center justify-between">

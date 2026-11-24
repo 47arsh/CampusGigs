@@ -6,6 +6,7 @@ const objectIdSchema = (message) => z.object({
 
 const taskIdSchema = objectIdSchema("Invalid task ID");
 const notificationIdSchema = objectIdSchema("Invalid notification ID");
+const userIdSchema = objectIdSchema("Invalid user ID");
 
-export { notificationIdSchema };
+export { notificationIdSchema, userIdSchema };
 export default taskIdSchema;

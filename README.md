@@ -93,6 +93,11 @@ I also added a separate AI service for campus-related questions. This allowed me
 * Protected API routes
 * User-specific task and notification access
 
+### Student Profiles
+
+* Public profile page with join date, completed gig count, and rating placeholder
+* Task cards link to the poster and assignee profiles
+
 ### Real-Time Notifications
 
 CampusGigs uses **Socket.IO** to provide real-time updates for important task events.

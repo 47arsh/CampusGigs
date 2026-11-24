@@ -61,7 +61,9 @@ const getTasks = async (req, res, next) => {
             Task.find(filter)
                 .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
-                .limit(limit),
+                .limit(limit)
+                .populate("createdBy", "name")
+                .populate("assignedTo", "name"),
 
             Task.countDocuments(filter)
         ]);
@@ -263,7 +265,9 @@ const getMyPostedTasks = async (req,res , next) => {
             Task.find(filter)
                 .sort({ createdAt: -1, _id: -1 })
                 .skip((page - 1) * limit)
-                .limit(limit),
+                .limit(limit)
+                .populate("createdBy", "name")
+                .populate("assignedTo", "name"),
             Task.countDocuments(filter)
         ]);
 

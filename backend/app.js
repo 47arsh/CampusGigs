@@ -6,6 +6,7 @@ import taskRoutes from "./routes/taskRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import errorHandler from "./middleware/errorMiddleware.js";
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
     res.json({
