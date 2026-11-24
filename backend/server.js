@@ -1,40 +1,21 @@
-import express from "express";
+import "./config/loadEnv.js";
 import http from "node:http";
-import dotenv from "dotenv";
-import cors from "cors";
 import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
+import app from "./app.js";
 import connectDB from "./config/db.js";
-import taskRoutes from "./routes/taskRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import aiRoutes from "./routes/aiRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js";
-import errorHandler from "./middleware/errorMiddleware.js";
+import { env } from "./config/env.js";
 
-dotenv.config();
-
-const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: env.corsOrigins,
         credentials: true
     }
 });
 
-app.use(cors({
-    origin: "http://localhost:5173"
-}));
-
-app.use(express.json());
-
 app.locals.io = io;
 app.set("io", io);
-
-app.use("/api/tasks", taskRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/notifications", notificationRoutes);
 
 io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
@@ -48,7 +29,7 @@ io.use((socket, next) => {
         : token;
 
     try {
-        const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET);
+        const decoded = jwt.verify(jwtToken, env.JWT_SECRET);
         socket.user = decoded;
         next();
     } catch (error) {
@@ -72,27 +53,12 @@ io.on("connection", (socket) => {
     });
 });
 
-app.get("/", (req, res) => {
-    res.json({
-        message: "Welcome to CampusGigs API"
-    });
-});
-
-app.use((req, res, next) => {
-    res.status(404).json({
-        message: "Route not found"
-    });
-});
-
-app.use(errorHandler);
 const startServer = async () => {
     await connectDB();
 
-    httpServer.listen(process.env.PORT, () => {
-        console.log(`Server is running on port ${process.env.PORT}`);
+    httpServer.listen(env.PORT, () => {
+        console.log(`Server is running on port ${env.PORT}`);
     });
 };
-
-export { app, io };
 
 startServer();
