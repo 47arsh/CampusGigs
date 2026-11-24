@@ -84,3 +84,17 @@ def test_chat_rejects_an_oversized_message(client):
     )
 
     assert response.status_code == 422
+
+
+def test_production_refuses_to_start_without_a_token(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("AI_SERVICE_TOKEN", raising=False)
+
+    import main
+
+    with pytest.raises(RuntimeError, match="AI_SERVICE_TOKEN is required"):
+        importlib.reload(main)
+
+    # Restore a usable module for any test that runs after this one.
+    monkeypatch.setenv("AI_SERVICE_TOKEN", "test-token")
+    importlib.reload(main)

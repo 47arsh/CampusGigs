@@ -32,7 +32,7 @@ From `ai-service/`:
 
 1. Create and activate a virtual environment (Python 3.10).
 2. Install pinned packages: `python -m pip install -r requirements-dev.txt` (`requirements-dev.txt` includes the runtime pins plus pytest and httpx).
-3. Copy `.env.example` to `.env` and set `GEMINI_API_KEY` and `AI_SERVICE_TOKEN`. Keep `GEMINI_EMBEDDING_MODEL=gemini-embedding-2-preview`.
+3. Copy `.env.example` to `.env` and set `GEMINI_API_KEY` and `AI_SERVICE_TOKEN`. Keep `GEMINI_EMBEDDING_MODEL=gemini-embedding-2-preview`. Leave `APP_ENV=development` locally.
 4. Create or update the local vector store: `python rag/ingest.py`.
 5. Start FastAPI: `python -m uvicorn main:app --reload --port 8000`.
 
@@ -40,7 +40,7 @@ The Express backend needs `AI_SERVICE_URL` pointing at this service, for example
 
 ## Internal authentication
 
-`POST /chat` requires an `X-Internal-Token` header matching `AI_SERVICE_TOKEN`. When the variable is unset the endpoint logs a warning and accepts unauthenticated requests so local development keeps working; always set a long random token in deployed environments. `GET /health` stays public for platform health checks.
+`POST /chat` requires an `X-Internal-Token` header matching `AI_SERVICE_TOKEN`. In development a missing token only logs a warning and accepts unauthenticated requests so local setup keeps working. With `APP_ENV=production` the service refuses to start unless `AI_SERVICE_TOKEN` is set, so a deployed service is never exposed without service-to-service authentication. `GET /health` stays public for platform health checks.
 
 The retriever, embeddings client, and vector store are created lazily on the first question, so the process can start and serve `/health` without a Gemini key or an ingested Chroma store.
 
@@ -82,7 +82,7 @@ Response:
 
 ## Deployment
 
-Deploy with `uvicorn main:app --host 0.0.0.0 --port $PORT`. Chroma data is not committed, so run `python rag/ingest.py` once in the target environment (or mount a persistent volume for `chroma_db/`) before serving questions. Set `GEMINI_API_KEY` and `AI_SERVICE_TOKEN` as platform secrets, and configure the backend with the same token plus an `AI_SERVICE_URL` reachable from the API host.
+Deploy with `uvicorn main:app --host 0.0.0.0 --port $PORT`. Chroma data is not committed, so run `python rag/ingest.py` once in the target environment (or mount a persistent volume for `chroma_db/`) before serving questions. Set `GEMINI_API_KEY`, `AI_SERVICE_TOKEN`, and `APP_ENV=production` as platform variables, and configure the backend with the same token plus an `AI_SERVICE_URL` reachable from the API host. The backend also refuses to start in production if one of that pair is set without the other.
 
 ## Git hygiene
 

@@ -12,6 +12,7 @@ from services.rag_service import RAGService
 load_dotenv()
 
 AI_SERVICE_TOKEN = os.getenv("AI_SERVICE_TOKEN", "").strip()
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 
 service = RAGService(
     knowledge_dir=os.path.join(os.path.dirname(__file__), "knowledge"),
@@ -20,6 +21,11 @@ service = RAGService(
 logger = logging.getLogger(__name__)
 
 if not AI_SERVICE_TOKEN:
+    if APP_ENV in {"production", "prod"}:
+        raise RuntimeError(
+            "AI_SERVICE_TOKEN is required when APP_ENV=production. "
+            "Set the same value on the Express backend."
+        )
     logger.warning(
         "AI_SERVICE_TOKEN is not set; /chat accepts unauthenticated requests. "
         "Set it in production so the endpoint is only reachable by the backend."

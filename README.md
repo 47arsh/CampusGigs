@@ -274,11 +274,11 @@ Required environment variables (see `backend/.env.example` for the full list):
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `MONGO_URI` | yes | MongoDB connection string |
-| `JWT_SECRET` | yes | Signing key for access tokens (32+ random characters) |
+| `JWT_SECRET` | yes | Signing key for access tokens (32+ random characters; enforced in production) |
 | `PORT` | no | HTTP port, defaults to `3000` |
 | `CORS_ORIGINS` | no | Comma-separated allowed browser origins |
 | `AI_SERVICE_URL` | no | Base URL of the AI service |
-| `AI_SERVICE_TOKEN` | no | Shared secret forwarded to the AI service |
+| `AI_SERVICE_TOKEN` | no | Shared secret forwarded to the AI service; production requires it together with `AI_SERVICE_URL` |
 | `TRUST_PROXY` | no | Number of trusted proxy hops (`false` when directly exposed) |
 | `LOG_LEVEL` | no | `error` / `warn` / `info` / `debug` |
 | `TEST_MONGO_URI` | tests | Local MongoDB used by the test suite |
@@ -341,7 +341,9 @@ and pull request via `.github/workflows/ci.yml`.
   rate limiting sees real client IPs.
 * **AI service** — set `AI_SERVICE_TOKEN` on both services; the backend sends
   it as `X-Internal-Token` and the AI service rejects requests without it.
-  Point `AI_SERVICE_URL` at the deployed service.
+  Point `AI_SERVICE_URL` at the deployed service, use `APP_ENV=production` on
+  the AI service, and note that both services refuse to start in production if
+  the URL/token pair or a 32+ character `JWT_SECRET` is missing.
 * **Frontend** — build with `npm run build` and host `dist/`; set
   `VITE_API_URL` and `VITE_SOCKET_URL` at build time to the public backend
   URLs.

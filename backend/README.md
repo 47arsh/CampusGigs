@@ -21,10 +21,10 @@ Copy `.env.example` to `.env` and set at least `MONGO_URI` and `JWT_SECRET`. Con
 | `NODE_ENV` | no | `development` (default), `test`, `production` |
 | `PORT` | no | Defaults to `3000` |
 | `MONGO_URI` | yes | MongoDB connection string |
-| `JWT_SECRET` | yes | Use 32+ random characters in production |
+| `JWT_SECRET` | yes | 32+ random characters; production refuses to start below 32 |
 | `CORS_ORIGINS` | no | Comma-separated origins, defaults to `http://localhost:5173` |
 | `AI_SERVICE_URL` | no | Base URL of the FastAPI AI service |
-| `AI_SERVICE_TOKEN` | no | Shared secret sent as `X-Internal-Token` |
+| `AI_SERVICE_TOKEN` | no | Shared secret sent as `X-Internal-Token`; required in production whenever `AI_SERVICE_URL` is set |
 | `TRUST_PROXY` | no | Trusted proxy hop count (`false` when directly exposed) |
 | `LOG_LEVEL` | no | `error` / `warn` / `info` / `debug` |
 | `TEST_MONGO_URI` | tests | Local MongoDB for the test suite |
