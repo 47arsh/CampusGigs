@@ -1,10 +1,19 @@
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
-import { connectTestDb, disconnectTestDb, jsonRequest, startTestServer } from "./helpers/testApp.js";
+import User from "../models/User.js";
+import {
+    connectTestDb,
+    disconnectTestDb,
+    jsonRequest,
+    request,
+    startTestServer,
+    uniqueEmail
+} from "./helpers/testApp.js";
 
 describe("request validation", () => {
     let testServer;
+    let registeredEmail;
 
     before(async () => {
         await connectTestDb("campusgigs_test_validation");
@@ -12,6 +21,9 @@ describe("request validation", () => {
     });
 
     after(async () => {
+        if (registeredEmail) {
+            await User.deleteMany({ email: registeredEmail });
+        }
         await testServer?.close();
         await disconnectTestDb();
     });
@@ -67,5 +79,35 @@ describe("request validation", () => {
 
         assert.equal(response.status, 400);
         assert.equal(response.body.message, "Validation failed");
+    });
+
+    it("returns 400 for malformed JSON instead of 500", async () => {
+        const response = await request(testServer.baseUrl, "/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{not-json",
+        });
+        const body = await response.json();
+
+        assert.equal(response.status, 400);
+        assert.equal(body.message, "Invalid JSON payload");
+    });
+
+    it("registers, then logs in, with validated payloads", async () => {
+        registeredEmail = uniqueEmail("validation-user");
+        const password = "correct-horse";
+
+        const registration = await jsonRequest(testServer.baseUrl, "/api/auth/register", {
+            method: "POST",
+            body: JSON.stringify({ name: "Validation User", email: registeredEmail, password }),
+        });
+        assert.equal(registration.status, 201);
+
+        const login = await jsonRequest(testServer.baseUrl, "/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email: registeredEmail, password }),
+        });
+        assert.equal(login.status, 200);
+        assert.equal(typeof login.body.token, "string");
     });
 });

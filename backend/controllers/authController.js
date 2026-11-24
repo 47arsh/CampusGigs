@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 import User from "../models/User.js";
 
-const registerUser = async (req, res) => {
+const registerUser = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
 
@@ -32,13 +33,11 @@ const registerUser = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error registering user"
-        });
+        next(error);
     }
 };
 
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
@@ -63,7 +62,7 @@ const loginUser = async (req, res) => {
 
         const token = jwt.sign(
             { userId: user._id },
-            process.env.JWT_SECRET,
+            env.JWT_SECRET,
             { expiresIn: "1h" }
         );
 
@@ -73,9 +72,7 @@ const loginUser = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error logging in user"
-        });
+        next(error);
     }
 };
 

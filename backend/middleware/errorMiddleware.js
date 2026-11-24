@@ -1,6 +1,16 @@
 const errorHandler = (err, req, res, next) => {
+    // Malformed request bodies from body-parser
+    if (err.type === "entity.parse.failed") {
+        return res.status(400).json({
+            message: "Invalid JSON payload"
+        });
+    }
 
-    console.error(err);
+    if (err.type === "entity.too.large") {
+        return res.status(413).json({
+            message: "Request payload is too large"
+        });
+    }
 
     // Mongoose validation error
     if (err.name === "ValidationError") {
@@ -23,6 +33,17 @@ const errorHandler = (err, req, res, next) => {
             message: "A record with this value already exists"
         });
     }
+
+    // Errors that carry an explicit client-facing status
+    const status = err.status ?? err.statusCode;
+
+    if (Number.isInteger(status) && status >= 400 && status < 500) {
+        return res.status(status).json({
+            message: err.expose === false ? "Request failed" : err.message || "Request failed"
+        });
+    }
+
+    console.error(err);
 
     // Unknown/unexpected error
     res.status(500).json({
