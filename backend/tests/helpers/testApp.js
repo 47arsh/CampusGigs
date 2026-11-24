@@ -73,3 +73,10 @@ export async function request(baseUrl, path, { token, ...options } = {}) {
         }
     });
 }
+
+export async function jsonRequest(baseUrl, path, options) {
+    const response = await request(baseUrl, path, options);
+    const body = await response.json().catch(() => null);
+
+    return { status: response.status, body };
+}

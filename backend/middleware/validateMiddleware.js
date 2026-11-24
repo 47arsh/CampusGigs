@@ -26,13 +26,14 @@ const validate = (schemas) => {
                 });
             }
 
-            // req.query is read-only, so don't replace it.
-            // Instead, update its existing properties.
-            Object.keys(req.query).forEach((key) => {
-                delete req.query[key];
+            // Express 5 exposes req.query as a getter that re-parses the URL,
+            // so mutate-in-place is lost. Define an own value property instead.
+            Object.defineProperty(req, "query", {
+                value: result.data,
+                writable: true,
+                configurable: true,
+                enumerable: true
             });
-
-            Object.assign(req.query, result.data);
         }
 
         // Validate route parameters
