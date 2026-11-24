@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { logger } from "../utils/logger.js";
 
 const AI_REQUEST_TIMEOUT_MS = 20_000;
 
@@ -33,7 +34,7 @@ const chatWithAi = async (req, res) => {
                     ? response.status === 502 ? 502 : 500
                     : 400;
 
-            console.error("AI service request failed", {
+            logger.error("AI service request failed", {
                 status: response.status,
                 upstreamMessage: typeof data.detail === "string" ? data.detail : undefined
             });
@@ -51,13 +52,13 @@ const chatWithAi = async (req, res) => {
         });
     } catch (error) {
         if (error.name === "TimeoutError") {
-            console.error("AI service request timed out");
+            logger.error("AI service request timed out");
             return res.status(504).json({
                 message: "AI service did not respond in time"
             });
         }
 
-        console.error("AI service is unreachable", { name: error.name });
+        logger.error("AI service is unreachable", { name: error.name });
         return res.status(503).json({
             message: "AI service is unavailable"
         });

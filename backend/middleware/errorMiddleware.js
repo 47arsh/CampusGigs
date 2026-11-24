@@ -1,3 +1,6 @@
+import { env } from "../config/env.js";
+import { logger } from "../utils/logger.js";
+
 const errorHandler = (err, req, res, next) => {
     // Malformed request bodies from body-parser
     if (err.type === "entity.parse.failed") {
@@ -43,7 +46,11 @@ const errorHandler = (err, req, res, next) => {
         });
     }
 
-    console.error(err);
+    logger.error("Unhandled request error", {
+        name: err.name,
+        message: err.message,
+        stack: env.isProduction ? undefined : err.stack
+    });
 
     // Unknown/unexpected error
     res.status(500).json({

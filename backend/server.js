@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import app from "./app.js";
 import connectDB from "./config/db.js";
 import { env } from "./config/env.js";
+import { logger } from "./utils/logger.js";
 
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
@@ -57,7 +58,7 @@ const startServer = async () => {
     await connectDB();
 
     httpServer.listen(env.PORT, () => {
-        console.log(`Server is running on port ${env.PORT}`);
+        logger.info(`Server is running on port ${env.PORT}`);
     });
 };
 

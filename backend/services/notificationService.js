@@ -1,4 +1,5 @@
 import Notification from "../models/Notification.js";
+import { logger } from "../utils/logger.js";
 
 const createAndEmitNotification = async ({
     recipient,
@@ -23,7 +24,7 @@ const createAndEmitNotification = async ({
         });
     } catch (error) {
         // Notification failures must not fail an already-committed task mutation.
-        console.error("Failed to create notification", {
+        logger.error("Failed to create notification", {
             name: error.name,
             message: error.message
         });
@@ -37,7 +38,7 @@ const createAndEmitNotification = async ({
                 createdAt: notification.createdAt.toISOString ? notification.createdAt.toISOString() : notification.createdAt
             });
         } catch (error) {
-            console.error("Failed to emit notification", {
+            logger.error("Failed to emit notification", {
                 name: error.name,
                 message: error.message
             });
