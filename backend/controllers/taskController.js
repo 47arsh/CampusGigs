@@ -103,51 +103,16 @@ const getTaskById = async (req, res , next) => {
     }
 };
 
-// const acceptTask = async (req,res) => {
-//     try{
-//         const taskId = req.params.id;
-//         const userId = req.user.userId;
-
-//         const task = await Task.findById(taskId);
-//         if(!task){
-//             return res.status(404).json({
-//                 message: "Task not found"
-//             });
-//         }
-//         if(task.status !== "open"){
-//             return res.status(400).json({
-//                 message: "Task is not available for acceptance"
-//             });
-//         }
-//         const updatedTask = await Task.findByIdAndUpdate(taskId, {
-//             status: "accepted",
-//             assignedTo: userId
-//         }, { new: true });
-
-//         res.status(200).json({
-//             message: "Task accepted successfully",
-//             task: updatedTask
-//         });
-//     }
-//     catch(error){
-//         res.status(500).json({
-//             message: "Error accepting task"
-//         });
-//     }
-// }
-
 const acceptTask = async (req, res , next) => {
     try {
         const taskId = req.params.id;
         const userId = req.user.userId;
-        //inside mongoose findOneAndUpdate, we are checking if the task is open and also checking if the user is not the owner of the task. 
-        //If both conditions are met, then we update the task status to accepted and assign it to the user.
-        //also we do this inside findOneAndUpdate to avoid race conditions where two users try to accept the same task at the same time. This way, only one user will be able to accept the task and the other will get a 400 error.
+        // Conditional update so concurrent acceptances cannot both succeed.
         const updatedTask = await Task.findOneAndUpdate(
             {
                 _id: taskId,
                 status: "open",
-                createdBy: mongoose.trusted({ $ne: userId }) //ne means not equal. This is to ensure that the user accepting the task is not the owner of the task.
+                createdBy: mongoose.trusted({ $ne: userId }) // the poster cannot accept their own task
             },
             {
                 status: "accepted",
