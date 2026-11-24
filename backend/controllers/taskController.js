@@ -55,6 +55,7 @@ const getTasks = async (req, res, next) => {
 
         const [tasks, totalTasks] = await Promise.all([
             Task.find(filter)
+                .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
                 .limit(limit),
 
@@ -290,7 +291,7 @@ const cancelTask = async(req,res , next) => {
 const getMyPostedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
-        const tasks = await Task.find({ createdBy: userId });
+        const tasks = await Task.find({ createdBy: userId }).sort({ createdAt: -1, _id: -1 });
 
         res.status(200).json({
             message: "My posted tasks fetched successfully",
@@ -305,7 +306,9 @@ const getMyPostedTasks = async (req,res , next) => {
 const getMyAcceptedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
-        const tasks = await Task.find({ assignedTo: userId }).populate("createdBy", "name email");
+        const tasks = await Task.find({ assignedTo: userId })
+            .sort({ createdAt: -1, _id: -1 })
+            .populate("createdBy", "name email");
 
         res.status(200).json({
             message: "My accepted tasks fetched successfully",

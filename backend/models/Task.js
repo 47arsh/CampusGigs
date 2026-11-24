@@ -49,6 +49,11 @@ const taskSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Supports the public listing and the per-user dashboards without collection scans.
+taskSchema.index({ status: 1, createdAt: -1 });
+taskSchema.index({ createdBy: 1, createdAt: -1 });
+taskSchema.index({ assignedTo: 1, createdAt: -1 });
+
 const Task = mongoose.model("Task", taskSchema);
 
 export default Task;
