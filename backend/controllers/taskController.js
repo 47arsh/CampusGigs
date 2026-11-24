@@ -1,6 +1,7 @@
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
+import { paginationMeta } from "../utils/pagination.js";
 
 const createTask = async (req, res , next) => {
     try {
@@ -62,19 +63,15 @@ const getTasks = async (req, res, next) => {
             Task.countDocuments(filter)
         ]);
 
-        const totalPages = Math.ceil(totalTasks / limit);
-
         res.status(200).json({
             message: "Tasks fetched successfully",
             tasks,
-            pagination: {
+            pagination: paginationMeta({
                 page,
                 limit,
-                totalTasks,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1
-            }
+                total: totalTasks,
+                totalKey: "totalTasks"
+            })
         });
     } catch (error) {
         next(error);
@@ -291,11 +288,26 @@ const cancelTask = async(req,res , next) => {
 const getMyPostedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
-        const tasks = await Task.find({ createdBy: userId }).sort({ createdAt: -1, _id: -1 });
+        const { page, limit } = req.query;
+        const filter = { createdBy: userId };
+
+        const [tasks, totalTasks] = await Promise.all([
+            Task.find(filter)
+                .sort({ createdAt: -1, _id: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit),
+            Task.countDocuments(filter)
+        ]);
 
         res.status(200).json({
             message: "My posted tasks fetched successfully",
-            tasks: tasks
+            tasks: tasks,
+            pagination: paginationMeta({
+                page,
+                limit,
+                total: totalTasks,
+                totalKey: "totalTasks"
+            })
         });
     }
     catch(error){
@@ -306,13 +318,27 @@ const getMyPostedTasks = async (req,res , next) => {
 const getMyAcceptedTasks = async (req,res , next) => {
     try{
         const userId = req.user.userId;
-        const tasks = await Task.find({ assignedTo: userId })
-            .sort({ createdAt: -1, _id: -1 })
-            .populate("createdBy", "name email");
+        const { page, limit } = req.query;
+        const filter = { assignedTo: userId };
+
+        const [tasks, totalTasks] = await Promise.all([
+            Task.find(filter)
+                .sort({ createdAt: -1, _id: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .populate("createdBy", "name email"),
+            Task.countDocuments(filter)
+        ]);
 
         res.status(200).json({
             message: "My accepted tasks fetched successfully",
-            tasks: tasks
+            tasks: tasks,
+            pagination: paginationMeta({
+                page,
+                limit,
+                total: totalTasks,
+                totalKey: "totalTasks"
+            })
         });
     }
     catch(error){

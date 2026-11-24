@@ -1,14 +1,28 @@
 import Notification from "../models/Notification.js";
+import { paginationMeta } from "../utils/pagination.js";
 
 const getNotifications = async (req, res, next) => {
     try {
-        const notifications = await Notification.find({
-            recipient: req.user.userId
-        }).sort({ createdAt: -1, _id: -1 });
+        const { page, limit } = req.query;
+        const filter = { recipient: req.user.userId };
+
+        const [notifications, totalNotifications] = await Promise.all([
+            Notification.find(filter)
+                .sort({ createdAt: -1, _id: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit),
+            Notification.countDocuments(filter)
+        ]);
 
         res.status(200).json({
             message: "Notifications fetched successfully",
-            notifications
+            notifications,
+            pagination: paginationMeta({
+                page,
+                limit,
+                total: totalNotifications,
+                totalKey: "totalNotifications"
+            })
         });
     } catch (error) {
         next(error);
@@ -18,12 +32,6 @@ const getNotifications = async (req, res, next) => {
 const markNotificationAsRead = async (req, res, next) => {
     try {
         const { id } = req.params;
-
-        if (!/^[a-fA-F0-9]{24}$/.test(id)) {
-            return res.status(400).json({
-                message: "Invalid notification ID"
-            });
-        }
 
         const notification = await Notification.findOneAndUpdate(
             {

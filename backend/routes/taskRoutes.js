@@ -5,6 +5,7 @@ import createTaskSchema from "../validators/taskValidator.js";
 import validate from "../middleware/validateMiddleware.js";
 import taskIdSchema from "../validators/commonValidator.js";
 import taskQuerySchema from "../validators/taskQueryValidator.js";
+import { myTasksQuerySchema } from "../validators/listQueryValidator.js";
 
 const router = express.Router();
 
@@ -14,9 +15,13 @@ router.post("/", authMiddleware, validate({
     .get("/", validate({
         query: taskQuerySchema
     }), getTasks)
-    .get("/my/posted", authMiddleware, getMyPostedTasks)//put before :id so express default routing doesn't treat "my" as an id
+    .get("/my/posted", authMiddleware, validate({
+        query: myTasksQuerySchema
+    }), getMyPostedTasks)//put before :id so express default routing doesn't treat "my" as an id
     // rule is to put specific routes before generic ones, otherwise express will treat "my" as an id and will not reach the getMyPostedTasks route
-    .get("/my/accepted", authMiddleware, getMyAcceptedTasks)
+    .get("/my/accepted", authMiddleware, validate({
+        query: myTasksQuerySchema
+    }), getMyAcceptedTasks)
     .get("/:id", validate({
         params: taskIdSchema
     }) ,getTaskById)
