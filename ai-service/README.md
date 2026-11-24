@@ -30,13 +30,28 @@ The current knowledge base contains five documents and 21 indexed chunks. `chrom
 
 From `ai-service/`:
 
-1. Create and activate a virtual environment.
-2. Install pinned packages: `python -m pip install -r requirements.txt`.
-3. Copy `.env.example` to `.env` and set `GEMINI_API_KEY`. Keep `GEMINI_EMBEDDING_MODEL=gemini-embedding-2-preview`.
+1. Create and activate a virtual environment (Python 3.10).
+2. Install pinned packages: `python -m pip install -r requirements-dev.txt` (`requirements-dev.txt` includes the runtime pins plus pytest and httpx).
+3. Copy `.env.example` to `.env` and set `GEMINI_API_KEY` and `AI_SERVICE_TOKEN`. Keep `GEMINI_EMBEDDING_MODEL=gemini-embedding-2-preview`.
 4. Create or update the local vector store: `python rag/ingest.py`.
 5. Start FastAPI: `python -m uvicorn main:app --reload --port 8000`.
 
-The Express backend needs `AI_SERVICE_URL` pointing at this service, for example `http://localhost:8000` in local development.
+The Express backend needs `AI_SERVICE_URL` pointing at this service, for example `http://localhost:8000` in local development, and must send the same `AI_SERVICE_TOKEN` it was configured with.
+
+## Internal authentication
+
+`POST /chat` requires an `X-Internal-Token` header matching `AI_SERVICE_TOKEN`. When the variable is unset the endpoint logs a warning and accepts unauthenticated requests so local development keeps working; always set a long random token in deployed environments. `GET /health` stays public for platform health checks.
+
+The retriever, embeddings client, and vector store are created lazily on the first question, so the process can start and serve `/health` without a Gemini key or an ingested Chroma store.
+
+## Testing
+
+```bash
+.venv/Scripts/python.exe -m pytest tests -q   # source .venv/bin/activate on macOS/Linux
+```
+
+Tests mock the generation layer and do not call Gemini, so they run without API credits. CI installs `requirements-dev.txt` and runs the same command on every push and pull request.
+
 
 ## API
 
@@ -45,6 +60,8 @@ The Express backend needs `AI_SERVICE_URL` pointing at this service, for example
 Returns `{"status":"ok"}`.
 
 ### `POST /chat`
+
+Requires `X-Internal-Token` (when `AI_SERVICE_TOKEN` is set); returns `401` otherwise.
 
 Request:
 
@@ -62,6 +79,10 @@ Response:
         }
       ]
     }
+
+## Deployment
+
+Deploy with `uvicorn main:app --host 0.0.0.0 --port $PORT`. Chroma data is not committed, so run `python rag/ingest.py` once in the target environment (or mount a persistent volume for `chroma_db/`) before serving questions. Set `GEMINI_API_KEY` and `AI_SERVICE_TOKEN` as platform secrets, and configure the backend with the same token plus an `AI_SERVICE_URL` reachable from the API host.
 
 ## Git hygiene
 

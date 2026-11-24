@@ -1,16 +1,44 @@
-# React + Vite
+# CampusGigs Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite single-page client for the CampusGigs campus marketplace. It handles authentication, browsing and posting tasks, the user's posted/accepted gigs, real-time notifications, and the AI assistant chat.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Vite dev server on port 5173 |
+| `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the built bundle locally |
+| `npm test` | Run the vitest suite once |
+| `npm run lint` | Run oxlint |
 
-## React Compiler
+## Configuration
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Create `frontend/.env` (or `.env.local`) when the backend is not on the default port:
 
-## Expanding the Oxlint configuration
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VITE_API_URL` | `http://localhost:3000/api` | REST API base URL |
+| `VITE_SOCKET_URL` | Derived from `VITE_API_URL` | Socket.IO server URL |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Vite only exposes `VITE_*` variables to the browser, so never place secrets here.
+
+## Structure
+
+```text
+src/
+├── components/   Navbar, notification bell, AI assistant
+├── context/      Auth and realtime notification providers
+├── lib/          fetch-based API client and formatting helpers
+└── pages/        Home, login, register, dashboard
+```
+
+## Behaviour notes
+
+* The API client throws an `Error` carrying `status`, which the auth context uses to sign the user out on a `401` (for example after token expiry).
+* The dashboard loads browse results and the user's own lists through independent effects so their loading states and refresh cycles do not block each other.
+* Socket.IO reconnects with the stored JWT and refreshes notifications when the connection is re-established.
+
+## Testing
+
+`npm test` runs vitest in a jsdom environment. Coverage currently targets the API client and timestamp formatting; run `npm run lint` and `npm run build` before shipping. CI runs lint, tests, and a production build on every push and pull request.
