@@ -1,6 +1,7 @@
 import "./config/loadEnv.js";
 import http from "node:http";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { Server } from "socket.io";
 import app from "./app.js";
 import connectDB from "./config/db.js";
@@ -61,5 +62,33 @@ const startServer = async () => {
         logger.info(`Server is running on port ${env.PORT}`);
     });
 };
+
+let shuttingDown = false;
+
+const shutdown = async (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info(`${signal} received, shutting down`);
+
+    const forceExit = setTimeout(() => {
+        logger.error("Shutdown timed out, forcing exit");
+        process.exit(1);
+    }, 10_000);
+    forceExit.unref();
+
+    try {
+        await new Promise((resolve) => io.close(resolve));
+        await mongoose.disconnect();
+        clearTimeout(forceExit);
+        logger.info("Shutdown complete");
+        process.exit(0);
+    } catch (error) {
+        logger.error("Error during shutdown", { message: error.message });
+        process.exit(1);
+    }
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 startServer();

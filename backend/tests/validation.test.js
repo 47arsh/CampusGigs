@@ -28,6 +28,13 @@ describe("request validation", () => {
         await disconnectTestDb();
     });
 
+    it("reports healthy status without authentication", async () => {
+        const response = await jsonRequest(testServer.baseUrl, "/health");
+
+        assert.equal(response.status, 200);
+        assert.deepEqual(response.body, { status: "ok" });
+    });
+
     it("rejects a non-numeric page with 400", async () => {
         const response = await jsonRequest(testServer.baseUrl, "/api/tasks?page=abc");
 

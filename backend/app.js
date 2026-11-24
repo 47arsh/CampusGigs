@@ -37,6 +37,12 @@ app.get("/", (req, res) => {
     });
 });
 
+// Readiness probe: the HTTP server only starts accepting traffic after
+// MongoDB connects, so a successful response implies a live database link.
+app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
 app.use((req, res) => {
     res.status(404).json({
         message: "Route not found"
