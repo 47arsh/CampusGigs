@@ -84,8 +84,8 @@ const getTaskById = async (req, res , next) => {
     try {
         const { id } = req.params;
 
-        const task = await Task.findById(id).populate("createdBy", "name email")
-                                            .populate("assignedTo", "name email");
+        const task = await Task.findById(id).populate("createdBy", "name")
+                                            .populate("assignedTo", "name");
 
         if (!task) {
             return res.status(404).json({
