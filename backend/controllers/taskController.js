@@ -203,10 +203,11 @@ const completeTask = async (req,res , next) => {
             });
         }
 
+        const completingUser = await User.findById(userId).select("name");
         await createAndEmitNotification({
-            recipient: updatedTask.assignedTo,
+            recipient: updatedTask.createdBy,
             type: "task_completed",
-            message: "Your task has been marked as completed.",
+            message: `${completingUser?.name || "A student"} marked the task "${updatedTask.title}" as completed.`,
             task: updatedTask._id,
             io: req.app.get("io")
         });

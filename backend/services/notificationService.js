@@ -11,19 +11,37 @@ const createAndEmitNotification = async ({
         return null;
     }
 
-    const notification = await Notification.create({
-        recipient,
-        type,
-        message,
-        task,
-        read: false
-    });
+    let notification;
+
+    try {
+        notification = await Notification.create({
+            recipient,
+            type,
+            message,
+            task,
+            read: false
+        });
+    } catch (error) {
+        // Notification failures must not fail an already-committed task mutation.
+        console.error("Failed to create notification", {
+            name: error.name,
+            message: error.message
+        });
+        return null;
+    }
 
     if (io) {
-        io.to(`user:${recipient.toString()}`).emit("notification:new", {
-            ...notification.toObject(),
-            createdAt: notification.createdAt.toISOString ? notification.createdAt.toISOString() : notification.createdAt
-        });
+        try {
+            io.to(`user:${recipient.toString()}`).emit("notification:new", {
+                ...notification.toObject(),
+                createdAt: notification.createdAt.toISOString ? notification.createdAt.toISOString() : notification.createdAt
+            });
+        } catch (error) {
+            console.error("Failed to emit notification", {
+                name: error.name,
+                message: error.message
+            });
+        }
     }
 
     return notification;
