@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { api } from "../lib/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function AiAssistant() {
+  const { token } = useAuth();
   const [message, setMessage] = useState("");
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState([]);
@@ -22,6 +24,7 @@ function AiAssistant() {
     try {
       const response = await api("/ai/chat", {
         method: "POST",
+        token,
         body: JSON.stringify({ message: question }),
       });
 
@@ -53,6 +56,7 @@ function AiAssistant() {
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           rows="4"
+          maxLength={2000}
           placeholder="What happens if I cancel a gig?"
           className="input mt-1.5 resize-y"
         />

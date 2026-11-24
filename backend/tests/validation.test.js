@@ -1,5 +1,6 @@
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import jwt from "jsonwebtoken";
 import { connectTestDb, disconnectTestDb, jsonRequest, startTestServer } from "./helpers/testApp.js";
 
 describe("request validation", () => {
@@ -45,5 +46,26 @@ describe("request validation", () => {
         assert.equal(response.status, 400);
         assert.equal(response.body.message, "Validation failed");
         assert.ok(response.body.errors.length >= 3);
+    });
+
+    it("requires authentication for the AI chat endpoint", async () => {
+        const response = await jsonRequest(testServer.baseUrl, "/api/ai/chat", {
+            method: "POST",
+            body: JSON.stringify({ message: "How do I cancel a task?" }),
+        });
+
+        assert.equal(response.status, 401);
+    });
+
+    it("rejects an oversized AI chat message", async () => {
+        const token = jwt.sign({ userId: "0123456789abcdef01234567" }, process.env.JWT_SECRET);
+        const response = await jsonRequest(testServer.baseUrl, "/api/ai/chat", {
+            method: "POST",
+            token,
+            body: JSON.stringify({ message: "a".repeat(2001) }),
+        });
+
+        assert.equal(response.status, 400);
+        assert.equal(response.body.message, "Validation failed");
     });
 });
