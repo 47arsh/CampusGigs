@@ -218,7 +218,7 @@ const app = db.getSiblingDB("campusgigs_staging");
 print("invalid task status:", app.tasks.countDocuments({ status: { $nin: ["open","accepted","completed","cancelled"] } }));
 print("tasks without creator:", app.tasks.countDocuments({ createdBy: { $exists: false } }));
 print("tasks without title:", app.tasks.countDocuments({ title: { $exists: false } }));
-print("invalid notification type:", app.notifications.countDocuments({ type: { $nin: ["task_accepted","task_submitted","task_completed","task_cancelled","general"] } }));
+print("invalid notification type:", app.notifications.countDocuments({ type: { $nin: ["task_accepted","task_submitted","task_completed","task_cancelled","review_received","general"] } }));
 print("notifications without recipient:", app.notifications.countDocuments({ recipient: { $exists: false } }));
 '
 ```

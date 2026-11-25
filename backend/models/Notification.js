@@ -16,6 +16,7 @@ const notificationSchema = new mongoose.Schema({
             "task_submitted",
             "task_completed",
             "task_cancelled",
+            "review_received",
             "general"
         ],
         default: "general"

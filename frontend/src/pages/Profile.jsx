@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { api } from "../lib/api.js";
+import { formatTimestamp } from "../lib/formatTimestamp.js";
 
 function formatJoined(value) {
   const date = new Date(value);
@@ -85,9 +86,30 @@ function Profile() {
 
             <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
               <h2 className="font-[Manrope] text-xl font-extrabold">Reviews</h2>
-              <p className="mt-3 rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
-                No reviews yet.
-              </p>
+              {profile.reviews?.length ? (
+                <ul className="mt-4 space-y-4">
+                  {profile.reviews.map((review) => (
+                    <li key={review._id} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-slate-800">
+                          {review.reviewer?.name || "A student"}
+                        </span>
+                        <span className="text-sm font-bold text-amber-600" aria-label={review.rating + " out of 5"}>
+                          {"★".repeat(review.rating)}
+                        </span>
+                      </div>
+                      {review.comment && (
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{review.comment}</p>
+                      )}
+                      <p className="mt-2 text-xs text-slate-500">{formatTimestamp(review.createdAt)}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
+                  No reviews yet.
+                </p>
+              )}
             </section>
           </>
         )}

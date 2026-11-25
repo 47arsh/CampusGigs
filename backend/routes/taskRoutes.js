@@ -1,11 +1,13 @@
 import express from "express";
 import {createTask , getTasks , getTaskById , acceptTask , completeTask , cancelTask , getMyPostedTasks , getMyAcceptedTasks} from "../controllers/taskController.js";
+import { createReview } from "../controllers/reviewController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import createTaskSchema from "../validators/taskValidator.js";
 import validate from "../middleware/validateMiddleware.js";
 import taskIdSchema from "../validators/commonValidator.js";
 import taskQuerySchema from "../validators/taskQueryValidator.js";
 import { myTasksQuerySchema } from "../validators/listQueryValidator.js";
+import reviewSchema from "../validators/reviewValidator.js";
 
 const router = express.Router();
 
@@ -34,5 +36,10 @@ router.post("/", authMiddleware, validate({
         .patch("/:id/cancel", authMiddleware, validate({
             params: taskIdSchema
         }), cancelTask)
+
+router.post("/:id/reviews", authMiddleware, validate({
+        params: taskIdSchema,
+        body: reviewSchema
+    }), createReview);
 
 export default router;

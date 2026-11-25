@@ -16,6 +16,16 @@ const userSchema = mongoose.Schema({
         type : String,
         required : true,
         minlength : 6
+    },
+    ratingSum : {
+        type : Number,
+        default : 0,
+        min : 0
+    },
+    ratingCount : {
+        type : Number,
+        default : 0,
+        min : 0
     }
 },{
     timestamps : true

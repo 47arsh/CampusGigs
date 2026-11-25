@@ -5,7 +5,7 @@ where relevant), commit, then stop for review. Schema changes are additive
 only — no migrations or data rewrites. New dependencies require a stated
 reason; the phases below need none.
 
-Status: Phase 1 complete. Phase 2 next.
+Status: Phase 2 complete. Phase 3 next.
 
 ## Phase 1 — Public profiles (complete)
 
@@ -18,7 +18,7 @@ Goal: a read-only profile surface so ratings have somewhere to live.
   detail page link to it.
 - Unknown user → 404; malformed id → 400.
 
-## Phase 2 — Reviews and reputation
+## Phase 2 — Reviews and reputation (complete)
 
 - `Review` model: `task`, `reviewer`, `reviewee`, `rating` (1–5), `comment`;
   unique index on `(task, reviewer)`. Only participants of a `completed` task

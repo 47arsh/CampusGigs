@@ -40,15 +40,23 @@ describe("Profile page", () => {
     });
   };
 
-  it("shows the public profile and stats", async () => {
+  it("shows the public profile, rating, and reviews", async () => {
     api.mockResolvedValue({
       profile: {
         _id: USER_ID,
         name: "Asha Rao",
         joinedAt: "2026-01-15T00:00:00.000Z",
         completedTasks: 3,
-        rating: { average: null, count: 0 },
-        reviews: [],
+        rating: { average: 4.7, count: 3 },
+        reviews: [
+          {
+            _id: "review-1",
+            rating: 5,
+            comment: "Super helpful and fast.",
+            createdAt: new Date().toISOString(),
+            reviewer: { _id: "user-2", name: "Phase B" },
+          },
+        ],
       },
     });
 
@@ -58,6 +66,27 @@ describe("Profile page", () => {
     expect(container.textContent).toContain("Asha Rao");
     expect(container.textContent).toContain("Joined");
     expect(container.textContent).toContain("3");
+    expect(container.textContent).toContain("4.7 / 5");
+    expect(container.textContent).toContain("3 reviews");
+    expect(container.textContent).toContain("Phase B");
+    expect(container.textContent).toContain("Super helpful and fast.");
+    expect(container.textContent).not.toContain("No reviews yet");
+  });
+
+  it("shows the empty review state for a new user", async () => {
+    api.mockResolvedValue({
+      profile: {
+        _id: USER_ID,
+        name: "New Student",
+        joinedAt: "2026-11-01T00:00:00.000Z",
+        completedTasks: 0,
+        rating: { average: null, count: 0 },
+        reviews: [],
+      },
+    });
+
+    await renderProfile();
+
     expect(container.textContent).toContain("No ratings yet");
     expect(container.textContent).toContain("No reviews yet");
   });

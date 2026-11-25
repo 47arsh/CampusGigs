@@ -21,7 +21,20 @@ const task = (id, title) => ({
   dropLocation: "Hostel",
 });
 
-describe("Dashboard browse pagination", () => {
+const completedTask = {
+  _id: "p1",
+  title: "Completed audit task",
+  description: "A completed task ready for a review.",
+  status: "completed",
+  reward: 60,
+  pickupLocation: "Library",
+  dropLocation: "Hostel",
+  createdBy: { _id: "creator-1", name: "Phase A", ratingSum: 8, ratingCount: 2 },
+  assignedTo: { _id: "worker-1", name: "Phase B" },
+  reviewedByMe: false,
+};
+
+describe("Dashboard", () => {
   let container;
   let root;
 
@@ -34,7 +47,10 @@ describe("Dashboard browse pagination", () => {
         }
         return Promise.resolve({ tasks: [task("1", "First page task")], pagination: { hasNextPage: true } });
       }
-      if (path.startsWith("/tasks/my/")) return Promise.resolve({ tasks: [] });
+      if (path.startsWith("/tasks/my/posted")) {
+        return Promise.resolve({ tasks: [completedTask] });
+      }
+      if (path.startsWith("/tasks/my/accepted")) return Promise.resolve({ tasks: [] });
       return Promise.resolve({});
     });
 
@@ -79,5 +95,37 @@ describe("Dashboard browse pagination", () => {
       ),
     ).toBe(false);
     expect(api).toHaveBeenCalledWith(expect.stringContaining("page=2"));
+  });
+
+  it("submits a review for a completed task", async () => {
+    await act(async () => {});
+
+    const postedTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent.includes("My posted"),
+    );
+    await act(async () => {
+      postedTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const reviewButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent.includes("Leave a review"),
+    );
+    expect(reviewButton).toBeTruthy();
+
+    await act(async () => {
+      reviewButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const form = container.querySelector("article form");
+    expect(form).toBeTruthy();
+
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(api).toHaveBeenCalledWith(
+      "/tasks/p1/reviews",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

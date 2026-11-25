@@ -1,8 +1,29 @@
 import mongoose from "mongoose";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
+import Review from "../models/Review.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
 import { paginationMeta } from "../utils/pagination.js";
+
+const attachReviewState = async (tasks, userId) => {
+    if (!tasks.length) {
+        return tasks;
+    }
+
+    const reviews = await Review.find({
+        task: mongoose.trusted({ $in: tasks.map((task) => task._id) }),
+        reviewer: userId
+    }).select("task");
+
+    const reviewedTaskIds = new Set(
+        reviews.map((review) => review.task.toString())
+    );
+
+    return tasks.map((task) => ({
+        ...task.toObject(),
+        reviewedByMe: reviewedTaskIds.has(task._id.toString())
+    }));
+};
 
 const createTask = async (req, res , next) => {
     try {
@@ -62,7 +83,7 @@ const getTasks = async (req, res, next) => {
                 .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate("createdBy", "name")
+                .populate("createdBy", "name ratingSum ratingCount")
                 .populate("assignedTo", "name"),
 
             Task.countDocuments(filter)
@@ -266,14 +287,16 @@ const getMyPostedTasks = async (req,res , next) => {
                 .sort({ createdAt: -1, _id: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
-                .populate("createdBy", "name")
+                .populate("createdBy", "name ratingSum ratingCount")
                 .populate("assignedTo", "name"),
             Task.countDocuments(filter)
         ]);
 
+        const tasksWithReviewState = await attachReviewState(tasks, userId);
+
         res.status(200).json({
             message: "My posted tasks fetched successfully",
-            tasks: tasks,
+            tasks: tasksWithReviewState,
             pagination: paginationMeta({
                 page,
                 limit,
@@ -298,13 +321,15 @@ const getMyAcceptedTasks = async (req,res , next) => {
                 .sort({ createdAt: -1, _id: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
-                .populate("createdBy", "name email"),
+                .populate("createdBy", "name email ratingSum ratingCount"),
             Task.countDocuments(filter)
         ]);
 
+        const tasksWithReviewState = await attachReviewState(tasks, userId);
+
         res.status(200).json({
             message: "My accepted tasks fetched successfully",
-            tasks: tasks,
+            tasks: tasksWithReviewState,
             pagination: paginationMeta({
                 page,
                 limit,

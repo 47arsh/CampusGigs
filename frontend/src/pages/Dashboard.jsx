@@ -29,8 +29,13 @@ function Field({ label, children }) {
   );
 }
 
-function PersonLink({ person, label }) {
+function PersonLink({ person, label, showRating }) {
   if (!person?.name || !person?._id) return null;
+
+  const ratingCount = person.ratingCount || 0;
+  const ratingAverage = ratingCount
+    ? Math.round((person.ratingSum / ratingCount) * 10) / 10
+    : null;
 
   return (
     <span>
@@ -38,14 +43,46 @@ function PersonLink({ person, label }) {
       <Link to={"/users/" + person._id} className="font-semibold text-slate-800 hover:text-indigo-600">
         {person.name}
       </Link>
+      {showRating && (
+        <span className="ml-1 text-xs font-semibold text-amber-600">
+          {ratingAverage == null ? "· New" : "★ " + ratingAverage}
+        </span>
+      )}
     </span>
   );
 }
 
-function TaskCard({ task, actionLabel, onAction }) {
+function TaskCard({ task, actionLabel, onAction, onReview }) {
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState("5");
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+
   const canAct =
     (actionLabel === "Mark complete" && task.status === "accepted") ||
     (actionLabel !== "Mark complete" && task.status === "open");
+  const canReview = Boolean(onReview) && task.status === "completed";
+
+  async function submitReview(event) {
+    event.preventDefault();
+    setReviewSaving(true);
+    setReviewError("");
+
+    try {
+      await onReview(task._id, {
+        rating: Number(reviewRating),
+        comment: reviewComment.trim(),
+      });
+      setReviewOpen(false);
+      setReviewComment("");
+      setReviewRating("5");
+    } catch (requestError) {
+      setReviewError(requestError.message);
+    } finally {
+      setReviewSaving(false);
+    }
+  }
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -64,7 +101,7 @@ function TaskCard({ task, actionLabel, onAction }) {
       <div className="mt-5 grid gap-2 border-t border-slate-100 pt-4 text-sm text-slate-600">
         <span>Pickup: <b className="text-slate-800">{task.pickupLocation}</b></span>
         <span>Drop: <b className="text-slate-800">{task.dropLocation}</b></span>
-        <PersonLink person={task.createdBy} label="Posted by" />
+        <PersonLink person={task.createdBy} label="Posted by" showRating />
         <PersonLink person={task.assignedTo} label="Assigned to" />
       </div>
 
@@ -81,11 +118,72 @@ function TaskCard({ task, actionLabel, onAction }) {
           </button>
         )}
       </div>
+
+      {canReview && task.reviewedByMe && (
+        <p className="mt-3 text-xs font-semibold text-slate-500">
+          Thanks — you already reviewed this task.
+        </p>
+      )}
+
+      {canReview && !task.reviewedByMe && (
+        reviewOpen ? (
+          <form onSubmit={submitReview} className="mt-4 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            {reviewError && (
+              <p role="alert" className="text-xs text-red-700">{reviewError}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-xs font-bold text-slate-600">
+                Rating
+                <select
+                  value={reviewRating}
+                  onChange={(event) => setReviewRating(event.target.value)}
+                  className="ml-2 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm font-normal"
+                >
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>{value} ★</option>
+                  ))}
+                </select>
+              </label>
+              <input
+                value={reviewComment}
+                onChange={(event) => setReviewComment(event.target.value)}
+                maxLength={300}
+                placeholder="Optional note (max 300)"
+                className="min-w-40 flex-1 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={reviewSaving}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {reviewSaving ? "Submitting…" : "Submit review"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setReviewOpen(false); setReviewError(""); }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="mt-4">
+            <button
+              onClick={() => setReviewOpen(true)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Leave a review
+            </button>
+          </div>
+        )
+      )}
     </article>
   );
 }
 
-function TaskGrid({ loading, tasks, emptyMessage, actionLabel, onAction }) {
+function TaskGrid({ loading, tasks, emptyMessage, actionLabel, onAction, onReview }) {
   if (loading) {
     return <p className="py-12 text-center text-slate-500">Loading tasks…</p>;
   }
@@ -106,6 +204,7 @@ function TaskGrid({ loading, tasks, emptyMessage, actionLabel, onAction }) {
           task={task}
           actionLabel={actionLabel}
           onAction={onAction}
+          onReview={onReview}
         />
       ))}
     </div>
@@ -202,6 +301,17 @@ function Dashboard() {
     } catch (requestError) {
       setError(requestError.message);
     }
+  }
+
+  async function submitReview(taskId, review) {
+    setError("");
+    await api("/tasks/" + taskId + "/reviews", {
+      method: "POST",
+      token,
+      body: JSON.stringify(review),
+    });
+    setMessage("Review submitted. Thanks for the feedback!");
+    setListsRefresh((count) => count + 1);
   }
 
   async function createTask(event) {
@@ -328,13 +438,13 @@ function Dashboard() {
 
         {tab === "posted" && (
           <section className="mt-7">
-            <TaskGrid loading={listsLoading} tasks={posted} emptyMessage="You have not posted a task yet." actionLabel="Cancel task" onAction={(id) => updateTask(id, "cancel", "Task cancelled.")} />
+            <TaskGrid loading={listsLoading} tasks={posted} emptyMessage="You have not posted a task yet." actionLabel="Cancel task" onAction={(id) => updateTask(id, "cancel", "Task cancelled.")} onReview={submitReview} />
           </section>
         )}
 
         {tab === "accepted" && (
           <section className="mt-7">
-            <TaskGrid loading={listsLoading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} />
+            <TaskGrid loading={listsLoading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} onReview={submitReview} />
           </section>
         )}
 

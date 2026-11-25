@@ -132,6 +132,7 @@ async function main() {
         body: json({ name: "E2E Worker", email: emailB, password }),
     });
     check("register account B", registerB.status === 201, `status ${registerB.status}`);
+    const userIdB = registerB.body.user._id;
 
     const duplicate = await request("/api/auth/register", {
         method: "POST",
@@ -242,7 +243,68 @@ async function main() {
     const foreignRead = await request(`/api/notifications/${notificationId}/read`, { method: "PATCH", token: tokenB });
     check("account B cannot mark account A's notification", foreignRead.status === 404, `status ${foreignRead.status}`);
 
-    // 12. Anonymous privacy.
+    // 12. Reviews update reputation and unlock review state.
+    const reviewByA = await request(`/api/tasks/${taskId}/reviews`, {
+        method: "POST",
+        token: tokenA,
+        body: json({ rating: 5, comment: "Great work, delivered on time." }),
+    });
+    check("account A reviews the worker", reviewByA.status === 201, `status ${reviewByA.status}`);
+
+    const duplicateReview = await request(`/api/tasks/${taskId}/reviews`, {
+        method: "POST",
+        token: tokenA,
+        body: json({ rating: 4 }),
+    });
+    check("a second review from the same account is rejected with 409", duplicateReview.status === 409, `status ${duplicateReview.status}`);
+
+    const reviewByB = await request(`/api/tasks/${taskId}/reviews`, {
+        method: "POST",
+        token: tokenB,
+        body: json({ rating: 4, comment: "Clear instructions." }),
+    });
+    check("account B reviews the poster", reviewByB.status === 201, `status ${reviewByB.status}`);
+
+    const profileB = await request(`/api/users/${userIdB}/profile`);
+    check(
+        "account B's public profile shows the rating and reviewer",
+        profileB.status === 200 &&
+            profileB.body?.profile?.rating?.average === 5 &&
+            profileB.body?.profile?.rating?.count === 1 &&
+            profileB.body?.profile?.reviews?.[0]?.reviewer?.name === "E2E Owner" &&
+            profileB.body?.profile?.reviews?.[0]?.comment === "Great work, delivered on time.",
+        `status ${profileB.status}, rating ${json(profileB.body?.profile?.rating)}`,
+    );
+
+    const profileA = await request(`/api/users/${userIdA}/profile`);
+    check(
+        "account A's public profile shows the worker's review",
+        profileA.status === 200 &&
+            profileA.body?.profile?.rating?.average === 4 &&
+            profileA.body?.profile?.rating?.count === 1,
+        `status ${profileA.status}, rating ${json(profileA.body?.profile?.rating)}`,
+    );
+
+    const reviewedAccepted = await request("/api/tasks/my/accepted?limit=100", { token: tokenB });
+    check(
+        "the worker's my gigs marks the task as reviewed",
+        reviewedAccepted.body?.tasks?.find((task) => task._id === taskId)?.reviewedByMe === true,
+    );
+
+    const reviewEvent = await waitForEvent(socketA.events, (event) => event.type === "review_received");
+    check(
+        "account A receives the review notification over Socket.IO",
+        Boolean(reviewEvent) && reviewEvent.task === taskId,
+        reviewEvent ? "" : "no event received",
+    );
+
+    const anonymousReview = await request(`/api/tasks/${taskId}/reviews`, {
+        method: "POST",
+        body: json({ rating: 5 }),
+    });
+    check("anonymous review submission is rejected", anonymousReview.status === 401, `status ${anonymousReview.status}`);
+
+    // 13. Anonymous privacy.
     const anonymousDetail = await request(`/api/tasks/${taskId}`);
     const detailText = json(anonymousDetail.body || {});
     check(
@@ -259,7 +321,7 @@ async function main() {
     const anonymousAccept = await request(`/api/tasks/${taskId}/accept`, { method: "PATCH" });
     check("anonymous task acceptance is rejected", anonymousAccept.status === 401, `status ${anonymousAccept.status}`);
 
-    // 13. Invalid and expired tokens.
+    // 14. Invalid and expired tokens.
     const garbageToken = await request("/api/auth/me", { token: "not-a-valid-token" });
     check("garbage token is rejected", garbageToken.status === 401, `status ${garbageToken.status}`);
     const expiredToken = jwt.sign(
@@ -276,7 +338,7 @@ async function main() {
     check("anonymous socket connection is rejected", Boolean(anonymousSocket.error), anonymousSocket.error || "unexpectedly connected");
     anonymousSocket.socket.close();
 
-    // 14. Session behaviour: logout is client-side; the API is stateless.
+    // 15. Session behaviour: logout is client-side; the API is stateless.
     const afterLogout = await request("/api/tasks/my/posted");
     check("requests without a token behave as logged out", afterLogout.status === 401, `status ${afterLogout.status}`);
     const reusedToken = await request("/api/auth/me", { token: tokenA });

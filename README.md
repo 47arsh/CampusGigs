@@ -95,8 +95,9 @@ I also added a separate AI service for campus-related questions. This allowed me
 
 ### Student Profiles
 
-* Public profile page with join date, completed gig count, and rating placeholder
-* Task cards link to the poster and assignee profiles
+* Public profile page with join date, completed gig count, and average rating
+* Task cards link to the poster and assignee profiles and show the poster's rating
+* Participants can review each other after a task is completed; reviews appear on profiles
 
 ### Real-Time Notifications
 
