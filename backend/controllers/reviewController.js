@@ -2,9 +2,12 @@ import Review from "../models/Review.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
+import { autoConfirmStaleTasks } from "../services/taskLifecycle.js";
 
 const createReview = async (req, res, next) => {
     try {
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const taskId = req.params.id;
         const reviewerId = req.user.userId;
         const { rating, comment } = req.body;

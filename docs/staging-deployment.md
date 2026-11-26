@@ -215,7 +215,7 @@ no migrations or backfills. Read-only checks (all should return `0`):
 ```bash
 mongosh "$STAGING_MONGO_URI" --eval '
 const app = db.getSiblingDB("campusgigs_staging");
-print("invalid task status:", app.tasks.countDocuments({ status: { $nin: ["open","accepted","completed","cancelled"] } }));
+print("invalid task status:", app.tasks.countDocuments({ status: { $nin: ["open","accepted","submitted","completed","cancelled"] } }));
 print("tasks without creator:", app.tasks.countDocuments({ createdBy: { $exists: false } }));
 print("tasks without title:", app.tasks.countDocuments({ title: { $exists: false } }));
 print("invalid notification type:", app.notifications.countDocuments({ type: { $nin: ["task_accepted","task_submitted","task_completed","task_cancelled","review_received","general"] } }));
@@ -274,16 +274,18 @@ npm run test:e2e
 ```
 
 It boots the real API entrypoint on a throwaway `campusgigs_e2e_staging_*`
-database and covers registration, login, task creation, acceptance, realtime
-notifications, persistence, privacy, token expiry, and pagination limits; the
-database is dropped afterwards.
+database and covers registration, login, task creation, acceptance, submission,
+poster confirmation, realtime notifications, persistence, privacy, token expiry,
+and pagination limits; the database is dropped afterwards.
 
 Staging smoke checklist (disposable accounts):
 
 1. Register two accounts and log in.
 2. Create a task, browse it from the second account, accept it.
 3. Confirm the creator's bell shows the acceptance live and after a reload.
-4. Complete the task and confirm the completion notification.
+4. Submit the task from the assignee account and confirm the poster's bell shows
+   the submission; then confirm it as the poster and check the completion
+   notification on the assignee account.
 5. Open the task detail while logged out and confirm no emails are exposed.
 6. Ask the AI assistant a policy question and confirm an answer with sources.
 7. Confirm `GET /health` on both services and that the frontend loads deep

@@ -42,8 +42,12 @@ const taskSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ["open", "accepted", "completed", "cancelled"],
+        enum: ["open", "accepted", "submitted", "completed", "cancelled"],
         default: "open"
+    },
+
+    submittedAt: {
+        type: Date
     }
 }, {
     timestamps: true

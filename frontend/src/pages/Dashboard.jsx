@@ -16,6 +16,7 @@ const emptyTask = {
 const badgeStyles = {
   open: "bg-emerald-50 text-emerald-700",
   accepted: "bg-amber-50 text-amber-700",
+  submitted: "bg-violet-50 text-violet-700",
   completed: "bg-sky-50 text-sky-700",
   cancelled: "bg-slate-100 text-slate-600",
 };
@@ -52,16 +53,14 @@ function PersonLink({ person, label, showRating }) {
   );
 }
 
-function TaskCard({ task, actionLabel, onAction, onReview }) {
+function TaskCard({ task, actions = [], onReview }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState("5");
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewError, setReviewError] = useState("");
 
-  const canAct =
-    (actionLabel === "Mark complete" && task.status === "accepted") ||
-    (actionLabel !== "Mark complete" && task.status === "open");
+  const availableActions = actions.filter((action) => action.status === task.status);
   const canReview = Boolean(onReview) && task.status === "completed";
 
   async function submitReview(event) {
@@ -109,15 +108,24 @@ function TaskCard({ task, actionLabel, onAction, onReview }) {
         <span className="font-[Manrope] text-xl font-extrabold text-indigo-600">
           ₹{task.reward}
         </span>
-        {actionLabel && canAct && (
-          <button
-            onClick={() => onAction(task._id)}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
-            {actionLabel}
-          </button>
-        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          {availableActions.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => action.run(task._id)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {task.status === "submitted" && (
+        <p className="mt-3 text-xs font-semibold text-slate-500">
+          Submitted — awaiting poster confirmation. It completes automatically after 72 hours.
+        </p>
+      )}
 
       {canReview && task.reviewedByMe && (
         <p className="mt-3 text-xs font-semibold text-slate-500">
@@ -183,7 +191,7 @@ function TaskCard({ task, actionLabel, onAction, onReview }) {
   );
 }
 
-function TaskGrid({ loading, tasks, emptyMessage, actionLabel, onAction, onReview }) {
+function TaskGrid({ loading, tasks, emptyMessage, actions, onReview }) {
   if (loading) {
     return <p className="py-12 text-center text-slate-500">Loading tasks…</p>;
   }
@@ -202,8 +210,7 @@ function TaskGrid({ loading, tasks, emptyMessage, actionLabel, onAction, onRevie
         <TaskCard
           key={task._id}
           task={task}
-          actionLabel={actionLabel}
-          onAction={onAction}
+          actions={actions}
           onReview={onReview}
         />
       ))}
@@ -421,7 +428,7 @@ function Dashboard() {
               </Field>
               <button onClick={() => updateFilters({ minReward: "", maxReward: "" })} className="pb-2 text-sm font-semibold text-indigo-600">Clear filters</button>
             </div>
-            <TaskGrid loading={browseLoading} tasks={tasks} emptyMessage="No open tasks match these filters." actionLabel="Accept task" onAction={(id) => updateTask(id, "accept", "Task accepted — it is now in My gigs.")} />
+            <TaskGrid loading={browseLoading} tasks={tasks} emptyMessage="No open tasks match these filters." actions={[{ label: "Accept task", status: "open", run: (id) => updateTask(id, "accept", "Task accepted — it is now in My gigs.") }]} />
             {browseHasNext && !browseLoading && (
               <div className="mt-6 text-center">
                 <button
@@ -438,13 +445,13 @@ function Dashboard() {
 
         {tab === "posted" && (
           <section className="mt-7">
-            <TaskGrid loading={listsLoading} tasks={posted} emptyMessage="You have not posted a task yet." actionLabel="Cancel task" onAction={(id) => updateTask(id, "cancel", "Task cancelled.")} onReview={submitReview} />
+            <TaskGrid loading={listsLoading} tasks={posted} emptyMessage="You have not posted a task yet." actions={[{ label: "Cancel task", status: "open", run: (id) => updateTask(id, "cancel", "Task cancelled.") }, { label: "Confirm completion", status: "submitted", run: (id) => updateTask(id, "confirm", "Task confirmed — it is now completed.") }]} onReview={submitReview} />
           </section>
         )}
 
         {tab === "accepted" && (
           <section className="mt-7">
-            <TaskGrid loading={listsLoading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actionLabel="Mark complete" onAction={(id) => updateTask(id, "complete", "Great work — task marked complete.")} onReview={submitReview} />
+            <TaskGrid loading={listsLoading} tasks={accepted} emptyMessage="No accepted tasks yet. Browse the marketplace to get started." actions={[{ label: "Submit for confirmation", status: "accepted", run: (id) => updateTask(id, "submit", "Task submitted — waiting for the poster to confirm.") }]} onReview={submitReview} />
           </section>
         )}
 

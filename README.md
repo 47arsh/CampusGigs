@@ -41,7 +41,11 @@ Task Marketplace
      ▼
 Task Executor
      │
-     │ Completes task
+     │ Submits work
+     ▼
+  Submitted
+     │
+     │ Poster confirms (or auto-confirm after 72h)
      ▼
   Completed
 ```
@@ -68,7 +72,7 @@ Rather than building isolated CRUD features, the project provided a single appli
 
 As the project grew, I extended the original marketplace with additional capabilities instead of replacing its core architecture.
 
-The application now includes a real-time notification system that allows users to receive updates when tasks are accepted, completed, or cancelled. Notifications are persisted in MongoDB so they remain available even when a user is offline.
+The application now includes a real-time notification system that allows users to receive updates when tasks are accepted, submitted, completed, or cancelled. Notifications are persisted in MongoDB so they remain available even when a user is offline.
 
 I also added a separate AI service for campus-related questions. This allowed me to explore how an existing web application can be extended with an AI component without putting the AI logic directly into the main backend.
 
@@ -81,7 +85,9 @@ I also added a separate AI service for campus-related questions. This allowed me
 * Create and publish campus tasks
 * Browse available tasks
 * Accept tasks posted by other students
-* Complete and cancel tasks
+* Submit completed work for the poster's confirmation
+* Confirm submissions as the poster, with automatic completion after 72 hours
+* Cancel tasks
 * Track task status through its lifecycle
 * Reward-based task model
 

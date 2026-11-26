@@ -3,6 +3,7 @@ import Task from "../models/Task.js";
 import User from "../models/User.js";
 import Review from "../models/Review.js";
 import { createAndEmitNotification } from "../services/notificationService.js";
+import { autoConfirmStaleTasks } from "../services/taskLifecycle.js";
 import { paginationMeta } from "../utils/pagination.js";
 
 const attachReviewState = async (tasks, userId) => {
@@ -56,6 +57,8 @@ const createTask = async (req, res , next) => {
 
 const getTasks = async (req, res, next) => {
     try {
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const { page, limit , minReward , maxReward , status } = req.query;
 
         const skip = (page - 1) * limit;
@@ -106,6 +109,8 @@ const getTasks = async (req, res, next) => {
 
 const getTaskById = async (req, res , next) => {
     try {
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const { id } = req.params;
 
         const task = await Task.findById(id).populate("createdBy", "name")
@@ -171,8 +176,8 @@ const acceptTask = async (req, res , next) => {
     }
 };
 
-const completeTask = async (req,res , next) => {
-    try{
+const submitTask = async (req, res, next) => {
+    try {
         const taskId = req.params.id;
         const userId = req.user.userId;
 
@@ -181,28 +186,70 @@ const completeTask = async (req,res , next) => {
             status: "accepted",
             assignedTo: userId
         }, {
-            status: "completed"
+            status: "submitted",
+            submittedAt: new Date()
         }, {
             returnDocument: "after"
         });
 
-        if(!updatedTask){
+        if (!updatedTask) {
             return res.status(400).json({
-                message: "Task not found, unavailable, or cannot be completed by the user"
+                message: "Task not found, unavailable, or cannot be submitted by the user"
             });
         }
 
-        const completingUser = await User.findById(userId).select("name");
+        const submittingUser = await User.findById(userId).select("name");
         await createAndEmitNotification({
             recipient: updatedTask.createdBy,
-            type: "task_completed",
-            message: `${completingUser?.name || "A student"} marked the task "${updatedTask.title}" as completed.`,
+            type: "task_submitted",
+            message: `${submittingUser?.name || "A student"} submitted the task "${updatedTask.title}" for your confirmation.`,
             task: updatedTask._id,
             io: req.app.get("io")
         });
 
         res.status(200).json({
-            message: "Task completed successfully",
+            message: "Task submitted for confirmation",
+            task: updatedTask
+        });
+    }
+    catch(error){
+        next(error);
+    }
+}
+
+const confirmTask = async (req, res, next) => {
+    try {
+        const taskId = req.params.id;
+        const userId = req.user.userId;
+
+        const updatedTask = await Task.findOneAndUpdate({
+            _id: taskId,
+            status: "submitted",
+            createdBy: userId
+        }, {
+            status: "completed"
+        }, {
+            returnDocument: "after"
+        });
+
+        if (!updatedTask) {
+            return res.status(400).json({
+                message: "Task not found, unavailable, or cannot be confirmed by the user"
+            });
+        }
+
+        if (updatedTask.assignedTo) {
+            await createAndEmitNotification({
+                recipient: updatedTask.assignedTo,
+                type: "task_completed",
+                message: `The poster confirmed the task "${updatedTask.title}" as completed.`,
+                task: updatedTask._id,
+                io: req.app.get("io")
+            });
+        }
+
+        res.status(200).json({
+            message: "Task confirmed as completed",
             task: updatedTask
         });
     }
@@ -261,6 +308,11 @@ const cancelTask = async(req,res , next) => {
                 message: "Task is already cancelled"
             });
         }
+        if(task.status === "submitted"){
+            return res.status(400).json({
+                message: "Submitted tasks cannot be cancelled"
+            });
+        }
         if(task.status === "accepted"){
             return res.status(400).json({
                 message: "Accepted tasks cannot be cancelled"
@@ -278,6 +330,8 @@ const cancelTask = async(req,res , next) => {
 
 const getMyPostedTasks = async (req,res , next) => {
     try{
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const userId = req.user.userId;
         const { page, limit } = req.query;
         const filter = { createdBy: userId };
@@ -312,6 +366,8 @@ const getMyPostedTasks = async (req,res , next) => {
 
 const getMyAcceptedTasks = async (req,res , next) => {
     try{
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const userId = req.user.userId;
         const { page, limit } = req.query;
         const filter = { assignedTo: userId };
@@ -348,7 +404,8 @@ export {
     getTasks,
     getTaskById,
     acceptTask,
-    completeTask,
+    submitTask,
+    confirmTask,
     cancelTask,
     getMyPostedTasks,
     getMyAcceptedTasks

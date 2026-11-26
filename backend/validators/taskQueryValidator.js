@@ -26,7 +26,7 @@ const taskQuerySchema = z.object({
         .min(10, "Maximum reward must be at least 10")
         .optional(),
     status: z
-    .enum(["open", "accepted", "completed", "cancelled"])
+    .enum(["open", "accepted", "submitted", "completed", "cancelled"])
     .optional()
     .default("open")
 })

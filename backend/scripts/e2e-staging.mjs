@@ -204,28 +204,51 @@ async function main() {
         `status ${acceptedList.status}`,
     );
 
-    // 9–10. B completes; A receives the completion notification.
-    const complete = await request(`/api/tasks/${taskId}/complete`, { method: "PATCH", token: tokenB });
-    check("account B completes the task", complete.status === 200 && complete.body?.task?.status === "completed", `status ${complete.status}`);
-
-    const completedEvent = await waitForEvent(socketA.events, (event) => event.type === "task_completed");
+    // 9–10. B submits; A is asked to confirm, then confirms.
+    const submit = await request(`/api/tasks/${taskId}/submit`, { method: "PATCH", token: tokenB });
     check(
-        "account A receives the completion notification over Socket.IO",
-        Boolean(completedEvent) && completedEvent.task === taskId,
-        completedEvent ? "" : "no event received",
+        "account B submits the task for confirmation",
+        submit.status === 200 && submit.body?.task?.status === "submitted",
+        `status ${submit.status}`,
     );
 
-    const repeatComplete = await request(`/api/tasks/${taskId}/complete`, { method: "PATCH", token: tokenB });
-    check("completing twice is rejected", repeatComplete.status >= 400 && repeatComplete.status < 500, `status ${repeatComplete.status}`);
+    const submittedEvent = await waitForEvent(socketA.events, (event) => event.type === "task_submitted");
+    check(
+        "account A receives the submission notification over Socket.IO",
+        Boolean(submittedEvent) && submittedEvent.task === taskId,
+        submittedEvent ? "" : "no event received",
+    );
+
+    const repeatSubmit = await request(`/api/tasks/${taskId}/submit`, { method: "PATCH", token: tokenB });
+    check("submitting twice is rejected", repeatSubmit.status >= 400 && repeatSubmit.status < 500, `status ${repeatSubmit.status}`);
+
+    const workerConfirm = await request(`/api/tasks/${taskId}/confirm`, { method: "PATCH", token: tokenB });
+    check("the worker cannot confirm their own submission", workerConfirm.status >= 400 && workerConfirm.status < 500, `status ${workerConfirm.status}`);
+
+    const confirm = await request(`/api/tasks/${taskId}/confirm`, { method: "PATCH", token: tokenA });
+    check("account A confirms the task as completed", confirm.status === 200 && confirm.body?.task?.status === "completed", `status ${confirm.status}`);
+
+    const repeatConfirm = await request(`/api/tasks/${taskId}/confirm`, { method: "PATCH", token: tokenA });
+    check("confirming twice is rejected", repeatConfirm.status >= 400 && repeatConfirm.status < 500, `status ${repeatConfirm.status}`);
+
+    const workerNotifications = await request("/api/notifications", { token: tokenB });
+    check(
+        "account B is told the poster confirmed the task",
+        workerNotifications.status === 200 &&
+            workerNotifications.body?.notifications?.some(
+                (notification) => notification.type === "task_completed" && notification.task === taskId,
+            ),
+        `status ${workerNotifications.status}`,
+    );
 
     // 11. Notifications persist and can be marked read across requests.
     const notifications = await request("/api/notifications", { token: tokenA });
     const persistedTypes = notifications.body?.notifications?.map((notification) => notification.type) || [];
     check(
-        "acceptance and completion notifications persist for account A",
+        "acceptance and submission notifications persist for account A",
         notifications.status === 200 &&
             persistedTypes.includes("task_accepted") &&
-            persistedTypes.includes("task_completed") &&
+            persistedTypes.includes("task_submitted") &&
             notifications.body.notifications.every((notification) => notification.read === false),
         `status ${notifications.status}, types ${persistedTypes.join(",")}`,
     );

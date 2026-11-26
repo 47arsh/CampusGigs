@@ -1,9 +1,12 @@
 import Review from "../models/Review.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
+import { autoConfirmStaleTasks } from "../services/taskLifecycle.js";
 
 const getUserProfile = async (req, res, next) => {
     try {
+        await autoConfirmStaleTasks({ io: req.app.get("io") });
+
         const { id } = req.params;
 
         const user = await User.findById(id).select("name createdAt ratingSum ratingCount");

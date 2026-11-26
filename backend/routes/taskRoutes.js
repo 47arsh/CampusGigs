@@ -1,5 +1,5 @@
 import express from "express";
-import {createTask , getTasks , getTaskById , acceptTask , completeTask , cancelTask , getMyPostedTasks , getMyAcceptedTasks} from "../controllers/taskController.js";
+import {createTask , getTasks , getTaskById , acceptTask , submitTask , confirmTask , cancelTask , getMyPostedTasks , getMyAcceptedTasks} from "../controllers/taskController.js";
 import { createReview } from "../controllers/reviewController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import createTaskSchema from "../validators/taskValidator.js";
@@ -30,9 +30,12 @@ router.post("/", authMiddleware, validate({
         .patch("/:id/accept", authMiddleware, validate({
             params: taskIdSchema
         }), acceptTask)
-        .patch("/:id/complete", authMiddleware, validate({
+        .patch("/:id/submit", authMiddleware, validate({
             params: taskIdSchema
-        }), completeTask)
+        }), submitTask)
+        .patch("/:id/confirm", authMiddleware, validate({
+            params: taskIdSchema
+        }), confirmTask)
         .patch("/:id/cancel", authMiddleware, validate({
             params: taskIdSchema
         }), cancelTask)

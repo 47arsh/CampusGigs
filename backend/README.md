@@ -47,7 +47,8 @@ All endpoints are prefixed with `/api`. JSON bodies are limited to 32 KB and val
 | `GET` | `/api/tasks/my/accepted` | JWT | Tasks accepted by the caller (`page`, `limit`) |
 | `GET` | `/api/tasks/:id` | – | Task detail (participants exposed by name only) |
 | `PATCH` | `/api/tasks/:id/accept` | JWT | Accept an open task |
-| `PATCH` | `/api/tasks/:id/complete` | JWT | Complete an accepted task you hold |
+| `PATCH` | `/api/tasks/:id/submit` | JWT | Submit an accepted task you hold for confirmation |
+| `PATCH` | `/api/tasks/:id/confirm` | JWT | Confirm a submitted task you posted as completed |
 | `PATCH` | `/api/tasks/:id/cancel` | JWT | Cancel your own open task |
 | `GET` | `/api/notifications` | JWT | List notifications (`page`, `limit`) |
 | `PATCH` | `/api/notifications/:id/read` | JWT | Mark a notification as read |
@@ -58,7 +59,7 @@ List responses keep the existing array fields and add a `pagination` object (`pa
 
 ### Task lifecycle
 
-`open -> accepted -> completed`, with `cancelled` available only while a task is open. Every transition is a single atomic `findOneAndUpdate` guarded by the expected current status, so concurrent accept/complete/cancel requests cannot double-apply or corrupt state.
+`open -> accepted -> submitted -> completed`, with `cancelled` available only while a task is open. Every transition is a single atomic `findOneAndUpdate` guarded by the expected current status, so concurrent accept/submit/confirm/cancel requests cannot double-apply or corrupt state. A submission left unconfirmed for 72 hours is auto-completed on the next task read (no background job).
 
 ### Realtime notifications
 

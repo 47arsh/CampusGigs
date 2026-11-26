@@ -5,7 +5,7 @@ where relevant), commit, then stop for review. Schema changes are additive
 only — no migrations or data rewrites. New dependencies require a stated
 reason; the phases below need none.
 
-Status: Phase 2 complete. Phase 3 next.
+Status: Phase 3 complete. Phase 4 next.
 
 ## Phase 1 — Public profiles (complete)
 
@@ -28,7 +28,7 @@ Goal: a read-only profile surface so ratings have somewhere to live.
 - "X left you a review" notification through the existing pipeline.
 - UI: review prompt on completed tasks, rating on profiles and cards.
 
-## Phase 3 — Two-sided completion
+## Phase 3 — Two-sided completion (complete)
 
 - Assignee marks a task `submitted`; the creator confirms → `completed`.
   Auto-confirm after 72 hours without confirmation (lazy check on read, no
@@ -38,6 +38,10 @@ Goal: a read-only profile surface so ratings have somewhere to live.
 - Reviews (Phase 2) stay gated on final `completed`.
 - Decision to confirm: explicit `submitted` status (recommended) vs. a flag on
   `accepted`.
+
+Implemented as `PATCH /api/tasks/:id/submit` (assignee) and
+`PATCH /api/tasks/:id/confirm` (poster); the lazy auto-confirm sweep runs on
+task and profile reads.
 
 ## Phase 4 — Task editing and lifecycle
 

@@ -40,7 +40,10 @@ The accepting user becomes the user responsible for completing it.
 
 ## What happens after I complete a task?
 
-The assigned user can mark the task as completed.
+The assigned user submits the finished work for the poster's confirmation.
+
+The poster then confirms the submission, which marks the task as completed. If the
+poster does not confirm within 72 hours, the task is completed automatically.
 
 A completed task is no longer an available marketplace gig.
 
@@ -94,6 +97,7 @@ Task statuses make it clear whether a gig is:
 
 - available
 - assigned
+- submitted for confirmation
 - completed
 - cancelled
 

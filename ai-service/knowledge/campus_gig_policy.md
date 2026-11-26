@@ -51,11 +51,13 @@ A user cannot accept the task that he created by himself.
 
 ## Task Completion
 
-After successfully performing the task, the assigned user can mark the task as completed.
+After successfully performing the task, the assigned user submits it for the poster's confirmation.
+
+The poster confirms the submission, which marks the task as completed. Submissions that are not confirmed within 72 hours are completed automatically.
 
 A completed task should not continue to appear as an available open gig.
 
-Users should only mark a task as completed after the requested work has actually been performed.
+Users should only submit a task after the requested work has actually been performed.
 
 ---
 
@@ -77,7 +79,8 @@ CampusGigs tasks may have the following statuses:
 
 - `open` — available for a user to accept
 - `accepted` — assigned to a user
-- `completed` — successfully completed
+- `submitted` — work handed in, awaiting poster confirmation
+- `completed` — confirmed by the poster (or auto-confirmed after 72 hours)
 - `cancelled` — cancelled before completion
 
 ---
